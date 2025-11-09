@@ -1,5 +1,32 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api, HistoryItem } from './api/client';
+  import {
+    AppBar,
+    Toolbar,
+    Typography,
+    Box,
+    List,
+    ListItem,
+    ListItemText,
+    Divider,
+    Stack,
+    Button,
+    Fab,
+    Switch,
+    FormControlLabel,
+    Tooltip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Stepper,
+    Step,
+    StepLabel,
+      Alert,
+  } from '@mui/material';
+  import MicIcon from '@mui/icons-material/Mic';
+  import PrintIcon from '@mui/icons-material/Print';
+  import { keyframes } from '@mui/system';
 
 type Status = 'idle' | 'recording' | 'transcribing' | 'generating' | 'printing' | 'done' | 'error';
 
@@ -9,10 +36,30 @@ export const App: React.FC = () => {
   const [id, setId] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  // Auto print state synced with URL param `auto-print` and persisted to localStorage
+  const [autoPrint, setAutoPrint] = useState<boolean>(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const v = sp.get('auto-print');
+    if (v != null) return v === 'true';
+    try {
+      const saved = localStorage.getItem('autoPrint');
+      if (saved != null) return saved === 'true';
+    } catch {}
+    return true;
+  });
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
   useEffect(() => { refreshHistory(); }, []);
+
+  // Keep URL and localStorage in sync with autoPrint state
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    sp.set('auto-print', String(autoPrint));
+    const url = `${window.location.pathname}?${sp.toString()}`;
+    window.history.replaceState({}, '', url);
+    try { localStorage.setItem('autoPrint', String(autoPrint)); } catch {}
+  }, [autoPrint]);
 
   const refreshHistory = async () => {
     try { setHistory(await api.history()); } catch {}
@@ -34,12 +81,14 @@ export const App: React.FC = () => {
           setStatus('generating');
           const gen = await api.generate(id, prompt);
           setImageUrl(gen.imageUrl);
-          setStatus('printing');
-          try {
-            await api.print(id);
-          } catch (e) {
-            console.error('Print failed:', e);
-            // Continue to done even if printing fails, image is ready
+          if (autoPrint) {
+            setStatus('printing');
+            try {
+              await api.print(id);
+            } catch (e) {
+              console.error('Print failed:', e);
+              // Continue to done even if printing fails, image is ready
+            }
           }
           setStatus('done');
           await refreshHistory();
@@ -71,73 +120,161 @@ export const App: React.FC = () => {
   };
 
   const canRecord = status === 'idle' || status === 'error' || status === 'done';
+  const pulse = keyframes`
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,71,111, 0.4); }
+    70% { transform: scale(1.04); box-shadow: 0 0 0 18px rgba(239,71,111, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,71,111, 0); }
+  `;
+
+  const steps = autoPrint
+    ? ['Transkrypcja', 'Generowanie obrazu', 'Drukowanie']
+    : ['Transkrypcja', 'Generowanie obrazu'];
+  const activeStep =
+    status === 'transcribing' ? 0 :
+    status === 'generating' ? 1 :
+    (autoPrint && status === 'printing' ? 2 : steps.length); // done/error
 
   return (
-    <div style={{ display: 'flex', height: '100vh', fontFamily: 'system-ui, Arial' }}>
-      <aside style={{ width: 260, borderRight: '1px solid #eee', padding: 12, overflow: 'auto' }}>
-        <h3>Historia</h3>
-        {history.map(item => (
-          <div key={item.id} style={{ border: '1px solid #ddd', borderRadius: 6, padding: 8, marginBottom: 8 }}>
-            <div style={{ fontSize: 12, color: '#666' }}>{new Date(item.createdAt).toLocaleString()}</div>
-            <div style={{ fontSize: 13, margin: '6px 0' }}>{item.prompt}</div>
-            {item.imageUrl && (
-              <a href={item.imageUrl} target="_blank" rel="noreferrer">podgląd</a>
+    <Box sx={{ display: 'flex', height: '100vh' }}>
+      <AppBar position="fixed" color="primary" elevation={1}>
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            Generator kolorowanek
+          </Typography>
+          <Tooltip title={autoPrint ? 'Automatyczne drukowanie włączone' : 'Kolorowanki nie będą drukowane automatycznie'} arrow>
+            <FormControlLabel
+              labelPlacement="start"
+              control={
+                <Switch
+                  checked={autoPrint}
+                  onChange={(e) => setAutoPrint(e.target.checked)}
+                  color={autoPrint ? 'success' : 'error'}
+                  sx={{
+                    '& .MuiSwitch-switchBase': {
+                      color: autoPrint ? 'success.main' : 'error.main',
+                    },
+                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                      backgroundColor: 'success.main',
+                    },
+                    '& .MuiSwitch-track': {
+                      backgroundColor: autoPrint ? 'success.main' : 'error.main',
+                    },
+                  }}
+                />
+              }
+              label={<PrintIcon fontSize="small" />}
+              sx={{
+                ml: 2,
+                color: 'common.white',
+                '& .MuiFormControlLabel-label': { color: 'inherit' },
+              }}
+            />
+          </Tooltip>
+        </Toolbar>
+      </AppBar>
+      <Toolbar />
+      <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
+        <Box component="aside" sx={{ width: 320, borderRight: 1, borderColor: 'divider', p: 2, overflow: 'auto' }}>
+          <Typography variant="h6" gutterBottom>Historia</Typography>
+          <List dense>
+            {history.map(item => (
+              <React.Fragment key={item.id}>
+                <ListItem alignItems="flex-start">
+                  <ListItemText
+                    primaryTypographyProps={{ variant: 'subtitle1' }}
+                    secondaryTypographyProps={{ component: 'div' }}
+                    primary={new Date(item.createdAt).toLocaleString()}
+                    secondary={
+                      <>
+                        <Typography variant="body2" color="text.primary" sx={{ mb: 0.5 }}>{item.prompt}</Typography>
+                        {item.imageUrl && (
+                          <Box sx={{ mt: 1 }}>
+                            <Box component="img" src={item.imageUrl} alt="podgląd" sx={{ width: '100%', height: 140, borderRadius: 2, objectFit: 'cover', border: 1, borderColor: 'divider' }} />
+                          </Box>
+                        )}
+                      </>
+                    }
+                  />
+                </ListItem>
+                <Divider component="li" />
+              </React.Fragment>
+            ))}
+          </List>
+        </Box>
+
+        <Box component="main" sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
+          <Stack spacing={2} alignItems="center">
+            <Fab
+              aria-label="Nagraj prompt głosowy"
+              color="error"
+              size="large"
+              sx={{
+                width: 168,
+                height: 168,
+                animation: canRecord ? `${pulse} 1.8s ease-in-out infinite` : 'none',
+              }}
+              disabled={!canRecord}
+              onClick={canRecord ? startRecording : undefined}
+            >
+              <MicIcon sx={{ fontSize: 56 }} />
+            </Fab>
+
+            {status === 'recording' && (
+              <Stack direction="row" spacing={1}>
+                <Button variant="contained" color="success" onClick={stopRecording}>Stop</Button>
+                <Button variant="contained" color="warning" onClick={cancelRecording}>Kosz</Button>
+              </Stack>
             )}
-          </div>
-        ))}
-      </aside>
-      <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-        <div style={{ textAlign: 'center' }}>
-          <button
-            onClick={canRecord ? startRecording : undefined}
-            disabled={!canRecord}
-            style={{
-              width: 160,
-              height: 160,
-              borderRadius: '50%',
-              border: 'none',
-              background: canRecord ? '#ff3b30' : '#ccc',
-              color: 'white',
-              fontSize: 18,
-              boxShadow: '0 6px 20px rgba(0,0,0,0.15)'
-            }}
-            title="Nagraj prompt głosowy"
-          >
-            🎤
-          </button>
-          {status === 'recording' && (
-            <div style={{ marginTop: 16 }}>
-              <button onClick={stopRecording} style={{ marginRight: 8, background: '#34c759', color: '#fff', padding: '8px 12px', borderRadius: 6, border: 'none' }}>Stop</button>
-              <button onClick={cancelRecording} style={{ background: '#ff9f0a', color: '#fff', padding: '8px 12px', borderRadius: 6, border: 'none' }}>Kosz</button>
-            </div>
+          </Stack>
+        </Box>
+      </Box>
+
+      <Dialog open={status !== 'idle' && status !== 'recording'} fullWidth maxWidth="sm">
+        <DialogTitle>Przetwarzanie…</DialogTitle>
+        <DialogContent>
+          <Stepper activeStep={activeStep} alternativeLabel sx={{ my: 2 }}>
+            {steps.map(label => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+          {/* Subtle progress bar while steps are running */}
+          {(status === 'transcribing' || status === 'generating' || status === 'printing') && (
+            <Box sx={{ mt: 1 }}>
+              <Box sx={{ height: 4, bgcolor: 'action.selected', borderRadius: 999, overflow: 'hidden' }}>
+                <Box sx={{ width: '40%', height: '100%', bgcolor: 'primary.main', borderRadius: 999, animation: 'indeterminateSlide 1.6s ease-in-out infinite' }} />
+              </Box>
+              <style>{`
+                @keyframes indeterminateSlide {
+                  0% { transform: translateX(-100%); }
+                  50% { transform: translateX(120%); }
+                  100% { transform: translateX(250%); }
+                }
+              `}</style>
+            </Box>
           )}
 
-          {status !== 'idle' && status !== 'recording' && (
-            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ background: '#fff', padding: 24, borderRadius: 12, width: 480, maxWidth: '90%' }}>
-                <h2 style={{ marginTop: 0 }}>Przetwarzanie…</h2>
-                <ol>
-                  <li style={{ color: status === 'transcribing' ? '#111' : '#666' }}>Transkrypcja</li>
-                  <li style={{ color: status === 'generating' ? '#111' : '#666' }}>Generowanie obrazu</li>
-                  <li style={{ color: status === 'printing' ? '#111' : '#666' }}>Drukowanie</li>
-                </ol>
-                {status === 'done' && (
-                  <div>
-                    <p>Gotowe! {imageUrl && (<a href={imageUrl} target="_blank" rel="noreferrer">Podgląd</a>)} </p>
-                    <button onClick={() => setStatus('idle')}>Zamknij</button>
-                  </div>
-                )}
-                {status === 'error' && (
-                  <div>
-                    <p>Wystąpił błąd. Spróbuj ponownie.</p>
-                    <button onClick={() => setStatus('idle')}>Zamknij</button>
-                  </div>
-                )}
-              </div>
-            </div>
+          {status === 'done' && (
+            <>
+              <Alert severity="success" sx={{ mt: 2 }}>Gotowe!</Alert>
+              {imageUrl && (
+                <Box sx={{ mt: 2 }}>
+                  <Box component="img" src={imageUrl} alt="wynik" sx={{ width: '100%', height: 220, borderRadius: 2, objectFit: 'cover', border: 1, borderColor: 'divider' }} />
+                </Box>
+              )}
+            </>
           )}
-        </div>
-      </main>
-    </div>
+          {status === 'error' && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              Wystąpił błąd. Spróbuj ponownie.
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setStatus('idle')} autoFocus>Zamknij</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
