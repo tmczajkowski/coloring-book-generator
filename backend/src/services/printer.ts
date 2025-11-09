@@ -29,7 +29,6 @@ export const printFile = async (filePath: string): Promise<string> => {
     },
     'job-attributes-tag': {
       'media': PRINTER_MEDIA_A4,
-      'print-scaling': PRINTER_SCALING_FIT,
       'print-quality': PRINTER_QUALITY_DRAFT,
       'print-content-optimize': 'text'
     },
