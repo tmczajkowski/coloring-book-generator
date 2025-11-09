@@ -13,9 +13,9 @@ printRouter.post('/', async (req: Request, res: Response) => {
     const { id } = req.body || {};
     if (!id) return res.status(400).json({ error: 'Brak id' });
     const dir = getSessionDir(id);
-    const candidates = ['image.png'];
+    const candidates = ['image.jpg', 'image.png'];
     const existing = candidates.map(name => path.join(dir, name)).find(p => fs.existsSync(p));
-    if (!existing) return res.status(404).json({ error: 'Brak obrazu do druku (image.png/svg/pdf nie istnieje)' });
+    if (!existing) return res.status(404).json({ error: 'Brak obrazu do druku (image.jpg/png nie istnieje)' });
     logger.info('Drukowanie: start', { id, file: existing, printer: config.printerUri });
     const jobId = await printFile(existing);
     await markPrinted(id);

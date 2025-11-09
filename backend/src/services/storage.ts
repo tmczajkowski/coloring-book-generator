@@ -38,7 +38,7 @@ export const savePrompt = async (id: string, prompt: string) => {
   return promptPath;
 };
 
-export const saveImageBuffer = async (id: string, buffer: Buffer, ext: 'png' = 'png') => {
+export const saveImageBuffer = async (id: string, buffer: Buffer, ext: 'png' | 'jpg' = 'png') => {
   const dir = getSessionDir(id);
   await ensureDir(dir);
   const imagePath = path.join(dir, `image.${ext}`);
@@ -54,6 +54,7 @@ export const listHistory = async () => {
     const dir = getSessionDir(id);
     const metaPath = path.join(dir, 'meta.json');
     const promptPath = path.join(dir, 'prompt.txt');
+    const imageJpg = path.join(dir, 'image.jpg');
     const imagePng = path.join(dir, 'image.png');
     let meta: any = { id };
     try {
@@ -62,12 +63,13 @@ export const listHistory = async () => {
     } catch {}
     let prompt = '';
     try { prompt = await fs.readFile(promptPath, 'utf-8'); } catch {}
+    const hasJpg = fsSync.existsSync(imageJpg);
     const hasPng = fsSync.existsSync(imagePng);
     return {
       id,
       createdAt: meta.createdAt || 0,
       prompt,
-      imageUrl: hasPng ? `/files/${id}/image.png` : undefined,
+      imageUrl: hasJpg ? `/files/${id}/image.jpg` : (hasPng ? `/files/${id}/image.png` : undefined),
     };
   }));
   // newest first
