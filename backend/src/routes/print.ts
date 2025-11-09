@@ -5,6 +5,7 @@ import { getSessionDir, markPrinted } from '../services/storage.ts';
 import { printFile } from '../services/printer.ts';
 import { logger } from '../utils/logger.ts';
 import { config } from '../config.ts';
+import { FILE_IMAGE_JPG, FILE_IMAGE_PNG } from '../constants.ts';
 
 export const printRouter = Router();
 
@@ -13,7 +14,7 @@ printRouter.post('/', async (req: Request, res: Response) => {
     const { id } = req.body || {};
     if (!id) return res.status(400).json({ error: 'Brak id' });
     const dir = getSessionDir(id);
-    const candidates = ['image.jpg', 'image.png'];
+    const candidates = [FILE_IMAGE_JPG, FILE_IMAGE_PNG];
     const existing = candidates.map(name => path.join(dir, name)).find(p => fs.existsSync(p));
     if (!existing) return res.status(404).json({ error: 'Brak obrazu do druku (image.jpg/png nie istnieje)' });
     logger.info('Drukowanie: start', { id, file: existing, printer: config.printerUri });

@@ -3,36 +3,34 @@ import ipp from 'ipp';
 import sharp from 'sharp';
 import { config } from '../config.ts';
 import { logger } from '../utils/logger.ts';
+import { APP_NAME, JOB_NAME, PRINTER_DOCUMENT_NAME, PRINTER_MEDIA_A4, PRINTER_QUALITY_DRAFT, PRINTER_SCALING_FIT } from '../constants.ts';
 
 export const printFile = async (filePath: string): Promise<string> => {
   const printer = ipp.Printer(config.printerUri);
-  const lower = filePath.toLowerCase();
-  let buffer = fs.readFileSync(filePath);
+  let buffer: Buffer = fs.readFileSync(filePath) as Buffer;
   const format = 'image/jpeg';
 
-  // Always send low-quality JPEG to the printer to save ink/toner.
-  // Recompress/convert with white background to avoid transparency issues.
-  buffer = await sharp(buffer)
-    //.flatten({ background: { r: 255, g: 255, b: 255 } })
-    .jpeg({ quality: 75 })
-    .toBuffer();
+  {
+    const out = await sharp(buffer as any)
+      .flatten({ background: { r: 255, g: 255, b: 255 } })
+      .jpeg({ quality: 75 })
+      .toBuffer();
+    buffer = Buffer.from(out);
+  }
 
   logger.info('IPP: Print-Job', { uri: config.printerUri, file: filePath, format, bytes: buffer.byteLength });
 
   const pjMsg: any = {
     'operation-attributes-tag': {
-      'requesting-user-name': 'Coloring App',
-      'job-name': 'Kolorowanka',
+      'requesting-user-name': APP_NAME,
+      'job-name': JOB_NAME,
       'document-format': format,
-      'document-name': 'image.jpg'
+      'document-name': PRINTER_DOCUMENT_NAME
     },
     'job-attributes-tag': {
-      // Force A4 media and scale the image to fit the page
-      'media': 'iso_a4_210x297mm',
-     // 'print-scaling': 'fit', wykomentowane bo
-      // Request draft quality printing (3=draft, 4=normal, 5=high)
-      'print-quality': 3,
-      // Optimize for line art/text (if printer supports)
+      'media': PRINTER_MEDIA_A4,
+      'print-scaling': PRINTER_SCALING_FIT,
+      'print-quality': PRINTER_QUALITY_DRAFT,
       'print-content-optimize': 'text'
     },
     data: buffer

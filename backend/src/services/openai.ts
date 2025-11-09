@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import { config } from '../config.ts';
 import { logger } from '../utils/logger.ts';
+import { OPENAI_IMAGE_SIZE, OPENAI_IMAGE_QUALITY } from '../constants.ts';
 
 const OPENAI_BASE = 'https://api.openai.com/v1';
 
@@ -12,12 +13,10 @@ export const transcribeAudio = async (audioPath: string): Promise<string> => {
   const fileBuf = await fs.readFile(audioPath);
   logger.info('OpenAI: transcribe call', { audioPath, bytes: fileBuf.byteLength });
 
-  // Node 18+: use Blob/FormData
   const blob = new Blob([fileBuf], { type: 'audio/webm' });
   const form = new FormData();
   form.append('file', blob, 'audio.webm');
   form.append('model', 'whisper-1');
-  // Optionally: form.append('language', 'pl');
 
   const res = await fetch(`${OPENAI_BASE}/audio/transcriptions`, {
     method: 'POST',
@@ -26,7 +25,6 @@ export const transcribeAudio = async (audioPath: string): Promise<string> => {
   });
   if (!res.ok) throw new Error(`OpenAI transcribe failed: ${res.status} ${await res.text()}`);
   const data: any = await res.json();
-  // data.text is the transcript
   return data.text || '';
 };
 
@@ -36,8 +34,7 @@ export const generateImage = async (prompt: string): Promise<Buffer> => {
     return Buffer.from([]);
   }
   const p = `Narysuj czarno-białą ilustrację do kolorowania (line art, wyraźne kontury, bez tła, brak szarości, brak cieniowania), temat: ${prompt}. Styl przyjazny dla dzieci.`;
-  logger.info('OpenAI: image generation prompt', { original: prompt, composed: p, model: config.imageModel || 'gpt-image-1', size: '1536x1024' });
-  // Correct OpenAI Images endpoint for generations
+  logger.info('OpenAI: image generation prompt', { original: prompt, composed: p, model: config.imageModel || 'gpt-image-1', size: OPENAI_IMAGE_SIZE, quality: OPENAI_IMAGE_QUALITY });
   const res = await fetch(`${OPENAI_BASE}/images/generations`, {
     method: 'POST',
     headers: {
@@ -47,7 +44,8 @@ export const generateImage = async (prompt: string): Promise<Buffer> => {
     body: JSON.stringify({
       model: config.imageModel || 'gpt-image-1',
       prompt: p,
-      size: '1536x1024'
+      size: OPENAI_IMAGE_SIZE,
+      quality: OPENAI_IMAGE_QUALITY
     })
   });
   if (!res.ok) throw new Error(`OpenAI image failed: ${res.status} ${await res.text()}`);

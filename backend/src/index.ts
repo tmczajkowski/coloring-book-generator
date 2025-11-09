@@ -19,7 +19,6 @@ app.use('/api/generate', generateRouter);
 app.use('/api/print', printRouter);
 app.use('/api/history', historyRouter);
 
-// Static files from data dir
 app.use('/files', express.static(config.dataDir));
 
 app.get('/health', (_req: Request, res: Response) => res.json({ ok: true }));

@@ -3,6 +3,7 @@ import fsSync from 'fs';
 import path from 'path';
 import { config } from '../config.ts';
 import { logger } from '../utils/logger.ts';
+import { EXT_JPG, EXT_PNG, FILE_IMAGE_JPG, FILE_IMAGE_PNG } from '../constants.ts';
 
 const ensureDir = async (dir: string) => {
   await fs.mkdir(dir, { recursive: true });
@@ -38,7 +39,7 @@ export const savePrompt = async (id: string, prompt: string) => {
   return promptPath;
 };
 
-export const saveImageBuffer = async (id: string, buffer: Buffer, ext: 'png' | 'jpg' = 'png') => {
+export const saveImageBuffer = async (id: string, buffer: Buffer, ext: typeof EXT_JPG | typeof EXT_PNG = 'png') => {
   const dir = getSessionDir(id);
   await ensureDir(dir);
   const imagePath = path.join(dir, `image.${ext}`);
@@ -54,8 +55,8 @@ export const listHistory = async () => {
     const dir = getSessionDir(id);
     const metaPath = path.join(dir, 'meta.json');
     const promptPath = path.join(dir, 'prompt.txt');
-    const imageJpg = path.join(dir, 'image.jpg');
-    const imagePng = path.join(dir, 'image.png');
+    const imageJpg = path.join(dir, FILE_IMAGE_JPG);
+    const imagePng = path.join(dir, FILE_IMAGE_PNG);
     let meta: any = { id };
     try {
       const m = await fs.readFile(metaPath, 'utf-8');
@@ -69,7 +70,7 @@ export const listHistory = async () => {
       id,
       createdAt: meta.createdAt || 0,
       prompt,
-      imageUrl: hasJpg ? `/files/${id}/image.jpg` : (hasPng ? `/files/${id}/image.png` : undefined),
+      imageUrl: hasJpg ? `/files/${id}/${FILE_IMAGE_JPG}` : (hasPng ? `/files/${id}/${FILE_IMAGE_PNG}` : undefined),
     };
   }));
   // newest first
