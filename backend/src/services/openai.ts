@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import { config } from '../config.ts';
+import { logger } from '../utils/logger.ts';
 
 const OPENAI_BASE = 'https://api.openai.com/v1';
 
@@ -9,6 +10,7 @@ export const transcribeAudio = async (audioPath: string): Promise<string> => {
     return 'Smok, zamek i rycerz';
   }
   const fileBuf = await fs.readFile(audioPath);
+  logger.info('OpenAI: transcribe call', { audioPath, bytes: fileBuf.byteLength });
 
   // Node 18+: use Blob/FormData
   const blob = new Blob([fileBuf], { type: 'audio/webm' });
@@ -34,6 +36,7 @@ export const generateImage = async (prompt: string): Promise<Buffer> => {
     return Buffer.from([]);
   }
   const p = `Narysuj czarno-białą ilustrację do kolorowania (line art, wyraźne kontury, bez tła, brak szarości, brak cieniowania), temat: ${prompt}. Styl przyjazny dla dzieci.`;
+  logger.info('OpenAI: image generation prompt', { original: prompt, composed: p, model: config.imageModel || 'gpt-image-1' });
   // Correct OpenAI Images endpoint for generations
   const res = await fetch(`${OPENAI_BASE}/images/generations`, {
     method: 'POST',

@@ -1,11 +1,13 @@
 import fs from 'fs';
 import ipp from 'ipp';
 import { config } from '../config.ts';
+import { logger } from '../utils/logger.ts';
 
 export const printFile = async (filePath: string): Promise<string> => {
   const printer = ipp.Printer(config.printerUri);
   const data = fs.readFileSync(filePath);
   const docFormat = detectFormat(filePath);
+  logger.info('IPP: Print-Job', { uri: config.printerUri, file: filePath, format: docFormat, bytes: data.byteLength });
   const msg: any = {
     'operation-attributes-tag': {
       'requesting-user-name': 'Coloring App',
@@ -21,6 +23,7 @@ export const printFile = async (filePath: string): Promise<string> => {
     });
   });
   const jobId = res?.['job-attributes-tag']?.['job-id'] || `job-${Date.now()}`;
+  logger.info('IPP: Print-Job result', { jobId });
   return String(jobId);
 };
 
