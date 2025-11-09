@@ -35,7 +35,12 @@ export const App: React.FC = () => {
           const gen = await api.generate(id, prompt);
           setImageUrl(gen.imageUrl);
           setStatus('printing');
-          await api.print(id);
+          try {
+            await api.print(id);
+          } catch (e) {
+            console.error('Print failed:', e);
+            // Continue to done even if printing fails, image is ready
+          }
           setStatus('done');
           await refreshHistory();
         } catch (e) {
@@ -136,4 +141,3 @@ export const App: React.FC = () => {
     </div>
   );
 };
-

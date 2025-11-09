@@ -34,7 +34,8 @@ export const generateImage = async (prompt: string): Promise<Buffer> => {
     return Buffer.from([]);
   }
   const p = `Narysuj czarno-białą ilustrację do kolorowania (line art, wyraźne kontury, bez tła, brak szarości, brak cieniowania), temat: ${prompt}. Styl przyjazny dla dzieci.`;
-  const res = await fetch(`${OPENAI_BASE}/images`, {
+  // Correct OpenAI Images endpoint for generations
+  const res = await fetch(`${OPENAI_BASE}/images/generations`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${config.openaiApiKey}`,
