@@ -8,12 +8,14 @@ export const printFile = async (filePath: string): Promise<string> => {
   const printer = ipp.Printer(config.printerUri);
   const lower = filePath.toLowerCase();
   let buffer = fs.readFileSync(filePath);
-  let format = 'image/jpeg';
+  const format = 'image/jpeg';
 
-  // Always send JPEG to the printer. Convert if needed.
-  if (!(lower.endsWith('.jpg') || lower.endsWith('.jpeg'))) {
-    buffer = await sharp(buffer).flatten({ background: { r: 255, g: 255, b: 255 } }).jpeg({ quality: 95 }).toBuffer();
-  }
+  // Always send low-quality JPEG to the printer to save ink/toner.
+  // Recompress/convert with white background to avoid transparency issues.
+  buffer = await sharp(buffer)
+    //.flatten({ background: { r: 255, g: 255, b: 255 } })
+    .jpeg({ quality: 75 })
+    .toBuffer();
 
   logger.info('IPP: Print-Job', { uri: config.printerUri, file: filePath, format, bytes: buffer.byteLength });
 
@@ -23,6 +25,15 @@ export const printFile = async (filePath: string): Promise<string> => {
       'job-name': 'Kolorowanka',
       'document-format': format,
       'document-name': 'image.jpg'
+    },
+    'job-attributes-tag': {
+      // Force A4 media and scale the image to fit the page
+      'media': 'iso_a4_210x297mm',
+     // 'print-scaling': 'fit', wykomentowane bo
+      // Request draft quality printing (3=draft, 4=normal, 5=high)
+      'print-quality': 3,
+      // Optimize for line art/text (if printer supports)
+      'print-content-optimize': 'text'
     },
     data: buffer
   };

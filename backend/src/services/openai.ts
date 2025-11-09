@@ -36,7 +36,7 @@ export const generateImage = async (prompt: string): Promise<Buffer> => {
     return Buffer.from([]);
   }
   const p = `Narysuj czarno-białą ilustrację do kolorowania (line art, wyraźne kontury, bez tła, brak szarości, brak cieniowania), temat: ${prompt}. Styl przyjazny dla dzieci.`;
-  logger.info('OpenAI: image generation prompt', { original: prompt, composed: p, model: config.imageModel || 'gpt-image-1' });
+  logger.info('OpenAI: image generation prompt', { original: prompt, composed: p, model: config.imageModel || 'gpt-image-1', size: '1536x1024' });
   // Correct OpenAI Images endpoint for generations
   const res = await fetch(`${OPENAI_BASE}/images/generations`, {
     method: 'POST',
@@ -47,7 +47,7 @@ export const generateImage = async (prompt: string): Promise<Buffer> => {
     body: JSON.stringify({
       model: config.imageModel || 'gpt-image-1',
       prompt: p,
-      size: '1024x1024'
+      size: '1536x1024'
     })
   });
   if (!res.ok) throw new Error(`OpenAI image failed: ${res.status} ${await res.text()}`);
