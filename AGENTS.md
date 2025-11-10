@@ -9,12 +9,12 @@
 ## Build, Test, and Development
 - Backend:
   - `cd backend && npm i`
-  - `npm run dev`: start API with hot-reload on `:3000`.
+  - `npm run dev`: start API with hot-reload on `:33000`.
   - `npm run build`: type-check/compile to `dist`.
   - `npm start`: run compiled server.
 - Frontend:
   - `cd frontend && npm i`
-  - `npm run dev`: Vite dev server on `:5173` with proxy to `:3000` for `/api` and `/files`.
+  - `npm run dev`: Vite dev server on `:35173` with proxy to `:33000` for `/api` and `/files`.
   - `npm run build` / `npm run preview`: production build and preview.
 
 ## Coding Style & Naming
