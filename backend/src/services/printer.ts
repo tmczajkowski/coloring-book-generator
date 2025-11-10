@@ -68,11 +68,19 @@ export const printFile = async (filePath: string): Promise<string> => {
   }
 
   logger.info('IPP: raw Print-Job response', { pjRes });
-  const returnedJobId = pjRes?.['job-attributes-tag']?.['job-id'];
-  if (!returnedJobId) {
-    throw new Error('Printer did not return a job-id. Print-Job may not have been accepted.');
+  const jobAttrs = pjRes?.['job-attributes-tag'] || {};
+  const returnedJobId = jobAttrs['job-id'];
+  const returnedJobUri = jobAttrs['job-uri'];
+  const status = pjRes?.statusCode || pjRes?.status || 'unknown';
+
+  if (returnedJobId) {
+    const jobId = String(returnedJobId);
+    logger.info('IPP: Print-Job result', { jobId, status });
+    return jobId;
   }
-  const jobId = String(returnedJobId);
-  logger.info('IPP: Print-Job result', { jobId });
-  return jobId;
+
+  // Some printers don't return job-id but still accept the job; prefer job-uri or synthesize an id
+  const fallbackId = returnedJobUri ? String(returnedJobUri) : `job-${Date.now()}`;
+  logger.warn('IPP: Missing job-id in response; proceeding with fallback id', { status, fallbackId, jobAttrs });
+  return fallbackId;
 };

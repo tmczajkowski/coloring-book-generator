@@ -42,6 +42,7 @@ export const App: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [status, setStatus] = useState<Status>('idle');
+  const [processMode, setProcessMode] = useState<'full' | 'printOnly' | null>(null);
   const [prompt, setPrompt] = useState('');
   const [id, setId] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -106,6 +107,7 @@ export const App: React.FC = () => {
         // If recording was cancelled, do not process anything.
         if (cancelledRef.current) return;
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        setProcessMode('full');
         setStatus('transcribing');
         try {
           const { id, prompt } = await api.transcribe(blob);
@@ -167,14 +169,32 @@ export const App: React.FC = () => {
     70% { transform: scale(1.04); box-shadow: 0 0 0 18px rgba(239,71,111, 0); }
     100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,71,111, 0); }
   `;
+  const recordPulse = keyframes`
+    0% { box-shadow: 0 0 0 0 rgba(239,71,111, 0.55); transform: scale(1); }
+    60% { box-shadow: 0 0 0 12px rgba(239,71,111, 0); transform: scale(1.03); }
+    100% { box-shadow: 0 0 0 0 rgba(239,71,111, 0); transform: scale(1); }
+  `;
+  const wave = keyframes`
+    0% { transform: scaleY(0.4); }
+    50% { transform: scaleY(1); }
+    100% { transform: scaleY(0.4); }
+  `;
 
-  const steps = autoPrint
-    ? ['Transkrypcja', 'Generowanie obrazu', 'Drukowanie']
-    : ['Transkrypcja', 'Generowanie obrazu'];
-  const activeStep =
-    status === 'transcribing' ? 0 :
-    status === 'generating' ? 1 :
-    (autoPrint && status === 'printing' ? 2 : steps.length); // done/error
+  const steps = processMode === 'printOnly'
+    ? ['Drukowanie']
+    : (autoPrint ? ['Transkrypcja', 'Generowanie obrazu', 'Drukowanie'] : ['Transkrypcja', 'Generowanie obrazu']);
+  const activeStep = processMode === 'printOnly'
+    ? (status === 'printing' ? 0 : steps.length)
+    : (status === 'transcribing' ? 0 : status === 'generating' ? 1 : (autoPrint && status === 'printing' ? 2 : steps.length));
+
+  const handleCloseDialog = async () => {
+    if (status === 'done' && id) {
+      const item = history.find((h) => h.id === id);
+      if (item) setSelected(item);
+    }
+    setStatus('idle');
+    setProcessMode(null);
+  };
 
   return (
     <Box sx={{ display: 'flex', height: '100dvh' }}>
@@ -315,6 +335,7 @@ export const App: React.FC = () => {
                       <IconButton
                         onClick={async () => {
                           try {
+                            setProcessMode('full');
                             setStatus('generating');
                             setPrompt(selected.prompt);
                             const newId = String(Date.now());
@@ -343,6 +364,7 @@ export const App: React.FC = () => {
                       <IconButton
                         onClick={async () => {
                           try {
+                            setProcessMode('printOnly');
                             setId(selected.id);
                             setStatus('printing');
                             await api.print(selected.id);
@@ -396,6 +418,7 @@ export const App: React.FC = () => {
                       <IconButton
                         onClick={async () => {
                           try {
+                            setProcessMode('full');
                             setStatus('generating');
                             setPrompt(selected.prompt);
                             const newId = String(Date.now());
@@ -423,6 +446,7 @@ export const App: React.FC = () => {
                       <IconButton
                         onClick={async () => {
                           try {
+                            setProcessMode('printOnly');
                             setId(selected.id);
                             setStatus('printing');
                             await api.print(selected.id);
@@ -475,13 +499,38 @@ export const App: React.FC = () => {
                 sx={{
                   width: { xs: 96, sm: 168 },
                   height: { xs: 96, sm: 168 },
-                  animation: canRecord ? `${pulse} 1.8s ease-in-out infinite` : 'none',
+                  animation: status === 'recording' ? `${recordPulse} 1.4s ease-in-out infinite` : (canRecord ? `${pulse} 1.8s ease-in-out infinite` : 'none'),
+                  '&.Mui-disabled': {
+                    bgcolor: 'error.main',
+                    color: 'common.white',
+                    opacity: 1,
+                  },
                 }}
                 disabled={!canRecord}
                 onClick={canRecord ? startRecording : undefined}
               >
                 <MicIcon sx={{ fontSize: { xs: 36, sm: 56 } }} />
               </Fab>
+
+              {status === 'recording' && (
+                <Box aria-label="Nagrywanie – wizualizacja dźwięku" sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.6, height: 40 }}>
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <Box
+                      // eslint-disable-next-line react/no-array-index-key
+                      key={i}
+                      sx={{
+                        width: { xs: 4, sm: 6 },
+                        height: '100%',
+                        transformOrigin: 'center bottom',
+                        backgroundColor: 'error.main',
+                        borderRadius: 1,
+                        animation: `${wave} ${1.1 + (i % 5) * 0.12}s ease-in-out ${i * 0.08}s infinite`,
+                        boxShadow: '0 2px 8px rgba(239,71,111,0.35)',
+                      }}
+                    />
+                  ))}
+                </Box>
+              )}
 
               {status === 'recording' && (
                 <Stack direction="row" spacing={1}>
@@ -494,7 +543,7 @@ export const App: React.FC = () => {
         </Box>
       </Box>
 
-      <Dialog open={status !== 'idle' && status !== 'recording'} fullWidth maxWidth="sm" fullScreen={isMobile}>
+      <Dialog onClose={handleCloseDialog} open={status !== 'idle' && status !== 'recording'} fullWidth maxWidth="sm" fullScreen={isMobile}>
         <DialogTitle>Przetwarzanie…</DialogTitle>
         <DialogContent>
           <Stepper activeStep={activeStep} alternativeLabel sx={{ my: 2 }}>
@@ -504,7 +553,7 @@ export const App: React.FC = () => {
               </Step>
             ))}
           </Stepper>
-          {prompt && (
+          {prompt && processMode !== 'printOnly' && (
             <Box sx={{ mt: 1.5 }}>
               <Typography variant="subtitle2" gutterBottom>Prompt</Typography>
               <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
@@ -533,7 +582,21 @@ export const App: React.FC = () => {
               <Alert severity="success" sx={{ mt: 2 }}>Gotowe!</Alert>
               {imageUrl && (
                 <Box sx={{ mt: 2 }}>
-                  <Box component="img" src={imageUrl} alt="wynik" sx={{ width: '100%', height: 220, borderRadius: 2, objectFit: 'cover', border: 1, borderColor: 'divider' }} />
+                  <Box
+                    component="img"
+                    src={imageUrl}
+                    alt="wynik"
+                    sx={{
+                      display: 'block',
+                      width: '100%',
+                      height: 'auto',
+                      maxHeight: { xs: '60vh', sm: '70vh' },
+                      objectFit: 'contain',
+                      borderRadius: 2,
+                      border: 1,
+                      borderColor: 'divider',
+                    }}
+                  />
                 </Box>
               )}
             </>
@@ -545,7 +608,7 @@ export const App: React.FC = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setStatus('idle')} autoFocus>Zamknij</Button>
+          <Button onClick={handleCloseDialog} autoFocus>Zamknij</Button>
         </DialogActions>
       </Dialog>
       {isMobile && (
