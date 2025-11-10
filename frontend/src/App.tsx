@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { api, HistoryItem } from './api/client';
+import { api, HistoryItem, type RuntimeConfig } from './api/client';
   import {
     AppBar,
     Toolbar,
@@ -31,6 +31,7 @@ import { api, HistoryItem } from './api/client';
   import AutorenewIcon from '@mui/icons-material/Autorenew';
   import DeleteIcon from '@mui/icons-material/Delete';
   import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+  import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
   import { keyframes } from '@mui/system';
   import HistoryIcon from '@mui/icons-material/History';
   import { useTheme } from '@mui/material/styles';
@@ -51,6 +52,8 @@ export const App: React.FC = () => {
   const [previewBustToken, setPreviewBustToken] = useState<number>(0);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
+  const [runtimeConfig, setRuntimeConfig] = useState<RuntimeConfig | null>(null);
   // AI improve switch synced with URL param `improve` and persisted
   const [improveEnabled, setImproveEnabled] = useState<boolean>(() => {
     const sp = new URLSearchParams(window.location.search);
@@ -84,6 +87,15 @@ export const App: React.FC = () => {
       refreshHistory();
     });
   }, []);
+
+  const ensureConfigLoaded = async () => {
+    try {
+      const cfg = await api.getConfig();
+      setRuntimeConfig(cfg);
+    } catch (e) {
+      console.error('Load config failed', e);
+    }
+  };
 
   // Keep URL and localStorage in sync with autoPrint state
   useEffect(() => {
@@ -281,6 +293,16 @@ export const App: React.FC = () => {
                       inputProps={{ 'aria-label': 'Ulepszanie promptu' }}
                     />
                   </Box>
+                </Tooltip>
+                <Tooltip title="Konfiguracja" arrow>
+                  <IconButton
+                    size="small"
+                    sx={{ ml: 1.5, color: 'common.white' }}
+                    onClick={async () => { await ensureConfigLoaded(); setConfigOpen(true); }}
+                    aria-label="Konfiguracja"
+                  >
+                    <InfoOutlinedIcon fontSize="small" />
+                  </IconButton>
                 </Tooltip>
               </>
             );
@@ -663,6 +685,49 @@ export const App: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog} autoFocus>Zamknij</Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={configOpen} onClose={() => setConfigOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Konfiguracja</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={1.5} sx={{ mt: 1 }}>
+            <Box>
+              <Typography variant="subtitle2">OPENAI_IMAGE_MODEL</Typography>
+              <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace' }}>
+                {runtimeConfig?.imageModel || '—'}
+              </Box>
+            </Box>
+            <Box>
+              <Typography variant="subtitle2">OPENAI_TEXT_MODEL</Typography>
+              <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace' }}>
+                {runtimeConfig?.textModel || '—'}
+              </Box>
+            </Box>
+            <Box>
+              <Typography variant="subtitle2">OPENAI_STT_MODEL</Typography>
+              <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace' }}>
+                {runtimeConfig?.sttModel || '—'}
+              </Box>
+            </Box>
+            <Box>
+              <Typography variant="subtitle2">OPENAI_TIMEOUT_MS</Typography>
+              <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace' }}>
+                {runtimeConfig?.openaiTimeoutMs ?? '—'}
+              </Box>
+            </Box>
+            <Box>
+              <Typography variant="subtitle2">PRINTER_URI</Typography>
+              <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', wordBreak: 'break-all' }}>
+                {runtimeConfig?.printerUri || '—'}
+              </Box>
+            </Box>
+          </Stack>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
+            Aby zmienić wartości, edytuj plik .env i zrestartuj backend.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfigOpen(false)}>Zamknij</Button>
         </DialogActions>
       </Dialog>
       {isMobile && (

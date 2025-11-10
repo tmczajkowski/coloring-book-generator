@@ -26,6 +26,20 @@ export const loadConfig = async () => {
   } catch {}
 };
 
+export type RuntimeConfig = {
+  openaiTimeoutMs: number;
+  imageModel?: string;
+  textModel?: string;
+  sttModel?: string;
+  printerUri?: string;
+};
+
+export const getConfig = async (): Promise<RuntimeConfig> => {
+  const res = await fetch('/api/config');
+  if (!res.ok) throw new Error(await safeText(res));
+  return res.json();
+};
+
 const withTimeout = async <T>(fn: (signal: AbortSignal) => Promise<T>, ms = 30000): Promise<T> => {
   const ac = new AbortController();
   const t = setTimeout(() => ac.abort(), ms);
@@ -54,6 +68,7 @@ const safeText = async (res: Response) => {
 
 export const api = {
   loadConfig,
+  getConfig,
   setTimeoutMs,
   async transcribe(audio: Blob): Promise<{ id: string; prompt: string }> {
     const form = new FormData();

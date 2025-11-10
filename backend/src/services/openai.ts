@@ -29,7 +29,7 @@ export const transcribeAudio = async (audioPath: string): Promise<string> => {
   const blob = new Blob([fileBuf], { type: 'audio/webm' });
   const form = new FormData();
   form.append('file', blob, 'audio.webm');
-  form.append('model', 'whisper-1');
+  form.append('model', config.sttModel || 'whisper-1');
   // Force Polish language for better accuracy with Polish speech
   form.append('language', 'pl');
 
@@ -108,7 +108,7 @@ export const improvePrompt = async (original: string): Promise<string> => {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: config.textModel || 'gpt-4o-mini',
       messages: [
         { role: 'system', content: system },
         { role: 'user', content: user }
