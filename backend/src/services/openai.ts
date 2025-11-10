@@ -45,12 +45,11 @@ export const transcribeAudio = async (audioPath: string): Promise<string> => {
 
 export const generateImage = async (prompt: string): Promise<Buffer> => {
   if (!config.openaiApiKey) {
-    // Fallback: return empty buffer to signal placeholder path
-    return Buffer.from([]);
+    throw new Error('Brak konfiguracji OPENAI_API_KEY');
   }
   const p = `Narysuj czarno-białą ilustrację do kolorowania (line art, wyraźne kontury, bez tła, brak szarości, brak cieniowania), temat: ${prompt}. Styl przyjazny dla dzieci.`;
   logger.info('OpenAI: image generation prompt', { original: prompt, composed: p, model: config.imageModel || 'gpt-image-1', size: OPENAI_IMAGE_SIZE, quality: OPENAI_IMAGE_QUALITY });
-  // simple retry for transient errors (2 retries)
+  // simple retry for transient errors (2 retries). Do NOT retry user errors (e.g., moderation).
   let lastErr: any;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
@@ -69,19 +68,25 @@ export const generateImage = async (prompt: string): Promise<Buffer> => {
       });
       if (!res.ok) {
         const text = await res.text().catch(() => '');
-        // do not retry on 400 range (except 429)
-        if (res.status !== 429 && res.status < 500) {
+        // Mark 429/5xx as transient; 4xx as non-retryable (user error)
+        if (res.status === 429 || res.status >= 500) {
+          throw new Error(`OpenAI image transient: ${res.status} ${text}`);
+        } else {
+          // e.g. moderation_blocked
           throw new Error(`OpenAI image failed: ${res.status} ${text}`);
         }
-        throw new Error(`OpenAI image transient: ${res.status} ${text}`);
       }
       const data: any = await res.json();
       const b64 = data?.data?.[0]?.b64_json;
       if (!b64) throw new Error('Brak danych obrazu z OpenAI');
       return Buffer.from(b64, 'base64');
     } catch (e: any) {
+      const msg = String(e?.message || e);
       lastErr = e;
-      logger.warn('OpenAI: image attempt failed', { attempt, error: String(e?.message || e) });
+      logger.warn('OpenAI: image attempt failed', { attempt, error: msg });
+      // Only retry transient errors
+      const isTransient = msg.includes('transient');
+      if (!isTransient) throw e;
       if (attempt < 2) await delay(500 * Math.pow(2, attempt));
     }
   }
