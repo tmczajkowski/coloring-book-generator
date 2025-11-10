@@ -12,6 +12,9 @@ export const generateRouter = Router();
 
 generateRouter.post('/', async (req: Request, res: Response) => {
   try {
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(503).json({ error: 'Brak konfiguracji OPENAI_API_KEY – generowanie zablokowane.' });
+    }
     const { id, prompt } = req.body || {};
     if (!id || !prompt) return res.status(400).json({ error: 'Brak id lub promptu' });
     if (!isValidId(id)) return res.status(400).json({ error: 'Nieprawidłowe id' });

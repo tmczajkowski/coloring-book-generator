@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
-import { OPENAI_IMAGE_SIZE, OPENAI_IMAGE_QUALITY } from '../constants.js';
+import { OPENAI_IMAGE_SIZE } from '../constants.js';
 
 const OPENAI_BASE = 'https://api.openai.com/v1';
 
@@ -48,7 +48,7 @@ export const generateImage = async (prompt: string): Promise<Buffer> => {
     throw new Error('Brak konfiguracji OPENAI_API_KEY');
   }
   const p = `Narysuj czarno-białą ilustrację do kolorowania (line art, wyraźne kontury, bez tła, brak szarości, brak cieniowania), temat: ${prompt}. Styl przyjazny dla dzieci.`;
-  logger.info('OpenAI: image generation prompt', { original: prompt, composed: p, model: config.imageModel || 'gpt-image-1', size: OPENAI_IMAGE_SIZE, quality: OPENAI_IMAGE_QUALITY });
+  logger.info('OpenAI: image generation prompt', { original: prompt, composed: p, model: config.imageModel || 'gpt-image-1', size: OPENAI_IMAGE_SIZE });
   // simple retry for transient errors (2 retries). Do NOT retry user errors (e.g., moderation).
   let lastErr: any;
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -62,8 +62,7 @@ export const generateImage = async (prompt: string): Promise<Buffer> => {
         body: JSON.stringify({
           model: config.imageModel || 'gpt-image-1',
           prompt: p,
-          size: OPENAI_IMAGE_SIZE,
-          quality: OPENAI_IMAGE_QUALITY
+          size: OPENAI_IMAGE_SIZE
         })
       });
       if (!res.ok) {

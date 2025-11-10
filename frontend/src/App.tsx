@@ -54,6 +54,7 @@ export const App: React.FC = () => {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
   const [runtimeConfig, setRuntimeConfig] = useState<RuntimeConfig | null>(null);
+  const canGenerate = runtimeConfig?.canGenerate !== false;
   // AI improve switch synced with URL param `improve` and persisted
   const [improveEnabled, setImproveEnabled] = useState<boolean>(() => {
     const sp = new URLSearchParams(window.location.search);
@@ -83,7 +84,11 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     // Load runtime config (timeouts) then fetch history
-    api.loadConfig().finally(() => {
+    api.loadConfig().finally(async () => {
+      try {
+        const cfg = await api.getConfig();
+        setRuntimeConfig(cfg);
+      } catch {}
       refreshHistory();
     });
   }, []);
@@ -202,7 +207,7 @@ export const App: React.FC = () => {
     setStatus('idle');
   };
 
-  const canRecord = status === 'idle' || status === 'error' || status === 'done';
+  const canRecord = canGenerate && (status === 'idle' || status === 'error' || status === 'done');
   const pulse = keyframes`
     0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,71,111, 0.4); }
     70% { transform: scale(1.04); box-shadow: 0 0 0 18px rgba(239,71,111, 0); }
@@ -252,6 +257,35 @@ export const App: React.FC = () => {
     setStatus('idle');
     setProcessMode(null);
   };
+
+  // Show ONLY the config error screen if env is missing
+  if (runtimeConfig && runtimeConfig.missingEnv && runtimeConfig.missingEnv.length > 0) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', p: 2 }}>
+        <Box sx={{ width: '100%', maxWidth: 900 }}>
+          <Alert severity={canGenerate ? 'warning' : 'error'} sx={{ p: 3, '& .MuiAlert-message': { width: '100%' } }}>
+            <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+              Brakuje konfiguracji środowiska
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 1.5 }}>
+              Brakujące zmienne:
+            </Typography>
+            <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', wordBreak: 'break-word' }}>
+              {runtimeConfig.missingEnv.join(', ')}
+            </Box>
+            {!canGenerate && (
+              <Typography variant="body1" sx={{ mt: 1.5, fontWeight: 600 }}>
+                Generowanie kolorowanek jest zablokowane do czasu uzupełnienia konfiguracji.
+              </Typography>
+            )}
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              Uzupełnij plik .env i zrestartuj backend.
+            </Typography>
+          </Alert>
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ display: 'flex', height: '100dvh' }}>
@@ -310,6 +344,7 @@ export const App: React.FC = () => {
         </Toolbar>
       </AppBar>
       <Box sx={{ display: 'flex', flex: 1, minHeight: 0, pt: { xs: 7, sm: 8 } }}>
+        {/* Główny interfejs renderowany tylko gdy konfiguracja jest kompletna */}
         {!isMobile && (
         <Box component="aside" sx={{ width: 480, borderRight: 1, borderColor: 'divider', p: 2, overflow: 'auto' }}>
           <Typography variant="h6" gutterBottom>Historia</Typography>

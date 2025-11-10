@@ -32,6 +32,8 @@ export type RuntimeConfig = {
   textModel?: string;
   sttModel?: string;
   printerUri?: string;
+  missingEnv?: string[];
+  canGenerate?: boolean;
 };
 
 export const getConfig = async (): Promise<RuntimeConfig> => {
