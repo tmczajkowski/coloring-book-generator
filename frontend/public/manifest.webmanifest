@@ -1,0 +1,9 @@
+{
+  "name": "Generator kolorowanek",
+  "short_name": "Kolorowanki",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#8E7CFF",
+  "icons": []
+}

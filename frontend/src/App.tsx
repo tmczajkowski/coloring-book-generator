@@ -32,10 +32,15 @@ import { api, HistoryItem } from './api/client';
   import DeleteIcon from '@mui/icons-material/Delete';
   import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
   import { keyframes } from '@mui/system';
+  import HistoryIcon from '@mui/icons-material/History';
+  import { useTheme } from '@mui/material/styles';
+  import useMediaQuery from '@mui/material/useMediaQuery';
 
 type Status = 'idle' | 'recording' | 'transcribing' | 'generating' | 'printing' | 'done' | 'error';
 
 export const App: React.FC = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [status, setStatus] = useState<Status>('idle');
   const [prompt, setPrompt] = useState('');
   const [id, setId] = useState<string | null>(null);
@@ -44,6 +49,7 @@ export const App: React.FC = () => {
   const [selected, setSelected] = useState<HistoryItem | null>(null);
   const [previewBustToken, setPreviewBustToken] = useState<number>(0);
   const [errorText, setErrorText] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
   // Auto print state synced with URL param `auto-print` and persisted to localStorage
   const [autoPrint, setAutoPrint] = useState<boolean>(() => {
     const sp = new URLSearchParams(window.location.search);
@@ -171,9 +177,16 @@ export const App: React.FC = () => {
     (autoPrint && status === 'printing' ? 2 : steps.length); // done/error
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh' }}>
+    <Box sx={{ display: 'flex', height: '100dvh' }}>
       <AppBar position="fixed" color="primary" elevation={1}>
         <Toolbar>
+          {isMobile && (
+            <Tooltip title="Historia" arrow>
+              <IconButton edge="start" color="inherit" onClick={() => setHistoryOpen(true)} aria-label="Historia" sx={{ mr: 1 }}>
+                <HistoryIcon />
+              </IconButton>
+            </Tooltip>
+          )}
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             Generator kolorowanek
           </Typography>
@@ -209,6 +222,7 @@ export const App: React.FC = () => {
         </Toolbar>
       </AppBar>
       <Box sx={{ display: 'flex', flex: 1, minHeight: 0, pt: { xs: 7, sm: 8 } }}>
+        {!isMobile && (
         <Box component="aside" sx={{ width: 480, borderRight: 1, borderColor: 'divider', p: 2, overflow: 'auto' }}>
           <Typography variant="h6" gutterBottom>Historia</Typography>
           <List dense>
@@ -253,7 +267,7 @@ export const App: React.FC = () => {
                         <Typography variant="body2" color="text.primary" sx={{ mb: 0.5 }}>{item.prompt}</Typography>
                         {item.imageUrl && (
                           <Box sx={{ mt: 1, borderRadius: 2, border: 1, borderColor: 'divider', overflow: 'hidden' }}>
-                            <Box component="img" src={item.imageUrl} alt="podgląd" sx={{ width: '100%', height: 'auto', display: 'block' }} />
+                            <Box component="img" src={item.imageUrl} alt="podgląd" loading="lazy" decoding="async" sx={{ width: '100%', height: 'auto', display: 'block' }} />
                           </Box>
                         )}
                       </>
@@ -265,108 +279,192 @@ export const App: React.FC = () => {
             ))}
           </List>
         </Box>
+        )}
 
         <Box component="main" sx={{ flex: 1, position: 'relative', p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {(selected && status !== 'recording') ? (
             <Box sx={{ display: 'flex', width: '100%', height: '100%', gap: 2 }}>
               {/* Image area on the left (bigger) */}
               {selected.imageUrl && (
-                <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pb: { xs: 8, sm: 0 } }}>
                   <Box
                     component="img"
                     src={`${selected.imageUrl}?t=${previewBustToken}`}
                     alt={selected.prompt}
+                    loading="eager"
+                    decoding="async"
                     sx={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 2, border: 1, borderColor: 'divider' }}
                   />
                 </Box>
               )}
 
-              {/* Actions column on the right (vertical) */}
-              <Box sx={{ width: 64, display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center' }}>
-                <Tooltip title="Zamknij podgląd">
-                  <IconButton
-                    onClick={() => setSelected(null)}
-                    sx={{ bgcolor: 'common.black', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'grey.800' } }}
-                    aria-label="Zamknij"
-                  >
-                    <CloseIcon />
-                  </IconButton>
-                </Tooltip>
-                {selected.imageUrl && (
-                  <Tooltip title="Wygeneruj ponownie">
+              {/* Actions: vertical on desktop, bottom bar on mobile */}
+              {!isMobile ? (
+                <Box sx={{ width: 64, display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center' }}>
+                  <Tooltip title="Zamknij podgląd">
                     <IconButton
-                      onClick={async () => {
-                        try {
-                          setStatus('generating');
-                          setPrompt(selected.prompt);
-                          const newId = String(Date.now());
-                          const gen = await api.generate(newId, selected.prompt);
-                          setImageUrl(gen.imageUrl);
-                          await refreshHistory();
-                          // Re-select updated item and bust cache for preview
-                          const updated = (await api.history()).find(i => i.id === newId);
-                          if (updated) setSelected(updated);
-                          setPreviewBustToken(Date.now());
-                          setStatus('done');
-                        } catch (e) {
-                          console.error('Regenerate failed:', e);
-                          setStatus('error');
-                        }
-                      }}
-                      sx={{ bgcolor: 'info.main', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'info.dark' } }}
-                      aria-label="Wygeneruj ponownie"
-                      disabled={!(status === 'idle' || status === 'done' || status === 'error')}
+                      onClick={() => setSelected(null)}
+                      sx={{ bgcolor: 'common.black', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'grey.800' } }}
+                      aria-label="Zamknij"
                     >
-                      <AutorenewIcon />
+                      <CloseIcon />
                     </IconButton>
                   </Tooltip>
-                )}
-                {selected.imageUrl && (
-                  <Tooltip title="Drukuj kolorowankę">
-                    <IconButton
-                      onClick={async () => {
-                        try {
-                          setId(selected.id);
-                          setStatus('printing');
-                          await api.print(selected.id);
-                          setStatus('done');
-                          await refreshHistory();
-                        } catch (e) {
-                          console.error('Print failed:', e);
-                          setStatus('error');
-                        }
-                      }}
-                      sx={{ bgcolor: 'success.main', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'success.dark' } }}
-                      aria-label="Drukuj"
-                      disabled={!(status === 'idle' || status === 'done' || status === 'error')}
-                    >
-                      <PrintIcon />
+                  {selected.imageUrl && (
+                    <Tooltip title="Wygeneruj ponownie">
+                      <IconButton
+                        onClick={async () => {
+                          try {
+                            setStatus('generating');
+                            setPrompt(selected.prompt);
+                            const newId = String(Date.now());
+                            const gen = await api.generate(newId, selected.prompt);
+                            setImageUrl(gen.imageUrl);
+                            await refreshHistory();
+                            const updated = (await api.history()).find(i => i.id === newId);
+                            if (updated) setSelected(updated);
+                            setPreviewBustToken(Date.now());
+                            setStatus('done');
+                          } catch (e) {
+                            console.error('Regenerate failed:', e);
+                            setStatus('error');
+                          }
+                        }}
+                        sx={{ bgcolor: 'info.main', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'info.dark' } }}
+                        aria-label="Wygeneruj ponownie"
+                        disabled={!(status === 'idle' || status === 'done' || status === 'error')}
+                      >
+                        <AutorenewIcon />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {selected.imageUrl && (
+                    <Tooltip title="Drukuj kolorowankę">
+                      <IconButton
+                        onClick={async () => {
+                          try {
+                            setId(selected.id);
+                            setStatus('printing');
+                            await api.print(selected.id);
+                            setStatus('done');
+                            await refreshHistory();
+                          } catch (e) {
+                            console.error('Print failed:', e);
+                            setStatus('error');
+                          }
+                        }}
+                        sx={{ bgcolor: 'success.main', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'success.dark' } }}
+                        aria-label="Drukuj"
+                        disabled={!(status === 'idle' || status === 'done' || status === 'error')}
+                      >
+                        <PrintIcon />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {selected && (
+                    <Tooltip title="Usuń kolorowankę">
+                      <IconButton
+                        onClick={async () => {
+                          try {
+                            await api.remove(selected.id);
+                            setSelected(null);
+                            await refreshHistory();
+                            setStatus('idle');
+                          } catch (e) {
+                            console.error('Delete failed:', e);
+                            setStatus('error');
+                          }
+                        }}
+                        sx={{ bgcolor: 'error.main', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'error.dark' } }}
+                        aria-label="Usuń"
+                        disabled={!(status === 'idle' || status === 'done' || status === 'error')}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Box>
+              ) : (
+                <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 12, display: 'flex', justifyContent: 'center', gap: 2 }}>
+                  <Tooltip title="Zamknij podgląd">
+                    <IconButton onClick={() => setSelected(null)} sx={{ bgcolor: 'common.black', color: 'common.white', boxShadow: 2 }} aria-label="Zamknij">
+                      <CloseIcon />
                     </IconButton>
                   </Tooltip>
-                )}
-                {selected && (
-                  <Tooltip title="Usuń kolorowankę">
-                    <IconButton
-                      onClick={async () => {
-                        try {
-                          await api.remove(selected.id);
-                          setSelected(null);
-                          await refreshHistory();
-                          setStatus('idle');
-                        } catch (e) {
-                          console.error('Delete failed:', e);
-                          setStatus('error');
-                        }
-                      }}
-                      sx={{ bgcolor: 'error.main', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'error.dark' } }}
-                      aria-label="Usuń"
-                      disabled={!(status === 'idle' || status === 'done' || status === 'error')}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Tooltip>
-                )}
-              </Box>
+                  {selected.imageUrl && (
+                    <Tooltip title="Wygeneruj ponownie">
+                      <IconButton
+                        onClick={async () => {
+                          try {
+                            setStatus('generating');
+                            setPrompt(selected.prompt);
+                            const newId = String(Date.now());
+                            const gen = await api.generate(newId, selected.prompt);
+                            setImageUrl(gen.imageUrl);
+                            await refreshHistory();
+                            const updated = (await api.history()).find(i => i.id === newId);
+                            if (updated) setSelected(updated);
+                            setPreviewBustToken(Date.now());
+                            setStatus('done');
+                          } catch (e) {
+                            console.error('Regenerate failed:', e);
+                            setStatus('error');
+                          }
+                        }}
+                        sx={{ bgcolor: 'info.main', color: 'common.white', boxShadow: 2 }}
+                        aria-label="Wygeneruj ponownie"
+                      >
+                        <AutorenewIcon />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {selected.id && (
+                    <Tooltip title="Drukuj">
+                      <IconButton
+                        onClick={async () => {
+                          try {
+                            setId(selected.id);
+                            setStatus('printing');
+                            await api.print(selected.id);
+                            setStatus('done');
+                            await refreshHistory();
+                          } catch (e) {
+                            console.error('Print failed:', e);
+                            setStatus('error');
+                          }
+                        }}
+                        sx={{ bgcolor: 'success.main', color: 'common.white', boxShadow: 2 }}
+                        aria-label="Drukuj"
+                        disabled={!(status === 'idle' || status === 'done' || status === 'error')}
+                      >
+                        <PrintIcon />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {selected && (
+                    <Tooltip title="Usuń kolorowankę">
+                      <IconButton
+                        onClick={async () => {
+                          try {
+                            await api.remove(selected.id);
+                            setSelected(null);
+                            await refreshHistory();
+                            setStatus('idle');
+                          } catch (e) {
+                            console.error('Delete failed:', e);
+                            setStatus('error');
+                          }
+                        }}
+                        sx={{ bgcolor: 'error.main', color: 'common.white', boxShadow: 2 }}
+                        aria-label="Usuń"
+                        disabled={!(status === 'idle' || status === 'done' || status === 'error')}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Box>
+              )}
             </Box>
           ) : (
             <Stack spacing={2} alignItems="center">
@@ -375,14 +473,14 @@ export const App: React.FC = () => {
                 color="error"
                 size="large"
                 sx={{
-                  width: 168,
-                  height: 168,
+                  width: { xs: 96, sm: 168 },
+                  height: { xs: 96, sm: 168 },
                   animation: canRecord ? `${pulse} 1.8s ease-in-out infinite` : 'none',
                 }}
                 disabled={!canRecord}
                 onClick={canRecord ? startRecording : undefined}
               >
-                <MicIcon sx={{ fontSize: 56 }} />
+                <MicIcon sx={{ fontSize: { xs: 36, sm: 56 } }} />
               </Fab>
 
               {status === 'recording' && (
@@ -396,7 +494,7 @@ export const App: React.FC = () => {
         </Box>
       </Box>
 
-      <Dialog open={status !== 'idle' && status !== 'recording'} fullWidth maxWidth="sm">
+      <Dialog open={status !== 'idle' && status !== 'recording'} fullWidth maxWidth="sm" fullScreen={isMobile}>
         <DialogTitle>Przetwarzanie…</DialogTitle>
         <DialogContent>
           <Stepper activeStep={activeStep} alternativeLabel sx={{ my: 2 }}>
@@ -450,6 +548,74 @@ export const App: React.FC = () => {
           <Button onClick={() => setStatus('idle')} autoFocus>Zamknij</Button>
         </DialogActions>
       </Dialog>
+      {isMobile && (
+        <Dialog open={historyOpen} fullScreen onClose={() => setHistoryOpen(false)}>
+          <DialogTitle>Historia</DialogTitle>
+          <DialogContent dividers>
+            <List dense>
+              {history.map(item => (
+                <React.Fragment key={item.id}>
+                  <ListItem
+                    alignItems="flex-start"
+                    onClick={() => {
+                      if (item.imageUrl) {
+                        setSelected(item);
+                        setHistoryOpen(false);
+                      }
+                    }}
+                    sx={{ cursor: item.imageUrl ? 'pointer' : 'default' }}
+                  >
+                    <ListItemText
+                      primaryTypographyProps={{ variant: 'subtitle1' }}
+                      secondaryTypographyProps={{ component: 'div' }}
+                      primary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: 1 }}>
+                          <span>{new Date(item.createdAt).toLocaleString()}</span>
+                          <Tooltip title="Usuń kolorowankę">
+                            <IconButton
+                              edge="end"
+                              size="small"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  await api.remove(item.id);
+                                  if (selected?.id === item.id) setSelected(null);
+                                  await refreshHistory();
+                                } catch (err) {
+                                  console.error('Delete failed:', err);
+                                  setStatus('error');
+                                }
+                              }}
+                              sx={{ p: 0.25, bgcolor: 'error.main', color: 'common.white', '&:hover': { bgcolor: 'error.dark' } }}
+                              aria-label="Usuń"
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      }
+                      secondary={
+                        <>
+                          <Typography variant="body2" color="text.primary" sx={{ mb: 0.5 }}>{item.prompt}</Typography>
+                          {item.imageUrl && (
+                            <Box sx={{ mt: 1, borderRadius: 2, border: 1, borderColor: 'divider', overflow: 'hidden' }}>
+                              <Box component="img" src={item.imageUrl} alt="podgląd" loading="lazy" decoding="async" sx={{ width: '100%', height: 'auto', display: 'block' }} />
+                            </Box>
+                          )}
+                        </>
+                      }
+                    />
+                  </ListItem>
+                  <Divider component="li" />
+                </React.Fragment>
+              ))}
+            </List>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setHistoryOpen(false)}>Zamknij</Button>
+          </DialogActions>
+        </Dialog>
+      )}
     </Box>
   );
 };
