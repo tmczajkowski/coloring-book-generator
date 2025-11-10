@@ -36,7 +36,7 @@ import { api, HistoryItem } from './api/client';
   import { useTheme } from '@mui/material/styles';
   import useMediaQuery from '@mui/material/useMediaQuery';
 
-type Status = 'idle' | 'recording' | 'transcribing' | 'generating' | 'printing' | 'done' | 'error';
+type Status = 'idle' | 'recording' | 'transcribing' | 'improving' | 'generating' | 'printing' | 'done' | 'error';
 
 export const App: React.FC = () => {
   const theme = useTheme();
@@ -51,6 +51,18 @@ export const App: React.FC = () => {
   const [previewBustToken, setPreviewBustToken] = useState<number>(0);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  // AI improve switch synced with URL param `improve` and persisted
+  const [improveEnabled, setImproveEnabled] = useState<boolean>(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const v = sp.get('improve');
+    if (v != null) return v === 'true';
+    try {
+      const saved = localStorage.getItem('improveEnabled');
+      if (saved != null) return saved === 'true';
+    } catch {}
+    return false;
+  });
+  const [improvedPrompt, setImprovedPrompt] = useState<string | null>(null);
   // Auto print state synced with URL param `auto-print` and persisted to localStorage
   const [autoPrint, setAutoPrint] = useState<boolean>(() => {
     const sp = new URLSearchParams(window.location.search);
@@ -77,10 +89,12 @@ export const App: React.FC = () => {
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
     sp.set('auto-print', String(autoPrint));
+    sp.set('improve', String(improveEnabled));
     const url = `${window.location.pathname}?${sp.toString()}`;
     window.history.replaceState({}, '', url);
     try { localStorage.setItem('autoPrint', String(autoPrint)); } catch {}
-  }, [autoPrint]);
+    try { localStorage.setItem('improveEnabled', String(improveEnabled)); } catch {}
+  }, [autoPrint, improveEnabled]);
 
   // Close preview with ESC key
   useEffect(() => {
@@ -113,8 +127,21 @@ export const App: React.FC = () => {
           const { id, prompt } = await api.transcribe(blob);
           setId(id);
           setPrompt(prompt);
+          let finalPrompt = prompt;
+          setImprovedPrompt(null);
+          if (improveEnabled) {
+            setStatus('improving');
+            try {
+              const { improved } = await api.improve(id, prompt);
+              setImprovedPrompt(improved);
+              finalPrompt = improved;
+            } catch (e) {
+              console.error('Improve failed, fallback to original prompt:', e);
+              setImprovedPrompt(null);
+            }
+          }
           setStatus('generating');
-          const gen = await api.generate(id, prompt);
+          const gen = await api.generate(id, finalPrompt);
           setImageUrl(gen.imageUrl);
           if (autoPrint) {
             setStatus('printing');
@@ -182,10 +209,28 @@ export const App: React.FC = () => {
 
   const steps = processMode === 'printOnly'
     ? ['Drukowanie']
-    : (autoPrint ? ['Transkrypcja', 'Generowanie obrazu', 'Drukowanie'] : ['Transkrypcja', 'Generowanie obrazu']);
+    : (() => {
+      const arr: string[] = ['Transkrypcja'];
+      if (improveEnabled) arr.push('Ulepszanie promptu');
+      arr.push('Generowanie obrazu');
+      if (autoPrint) arr.push('Drukowanie');
+      return arr;
+    })();
   const activeStep = processMode === 'printOnly'
     ? (status === 'printing' ? 0 : steps.length)
-    : (status === 'transcribing' ? 0 : status === 'generating' ? 1 : (autoPrint && status === 'printing' ? 2 : steps.length));
+    : (() => {
+      if (status === 'transcribing') return 0;
+      if (improveEnabled) {
+        if (status === 'improving') return 1;
+        if (status === 'generating') return 2;
+        if (autoPrint && status === 'printing') return 3;
+        return steps.length;
+      } else {
+        if (status === 'generating') return 1;
+        if (autoPrint && status === 'printing') return 2;
+        return steps.length;
+      }
+    })();
 
   const handleCloseDialog = async () => {
     if (status === 'done' && id) {
@@ -210,35 +255,36 @@ export const App: React.FC = () => {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             Generator kolorowanek
           </Typography>
-          <Tooltip title={autoPrint ? 'Automatyczne drukowanie włączone' : 'Kolorowanki nie będą drukowane automatycznie'} arrow>
-            <FormControlLabel
-              labelPlacement="start"
-              control={
-                <Switch
-                  checked={autoPrint}
-                  onChange={(e) => setAutoPrint(e.target.checked)}
-                  color={autoPrint ? 'success' : 'error'}
-                  sx={{
-                    '& .MuiSwitch-switchBase': {
-                      color: autoPrint ? 'success.main' : 'error.main',
-                    },
-                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                      backgroundColor: 'success.main',
-                    },
-                    '& .MuiSwitch-track': {
-                      backgroundColor: autoPrint ? 'success.main' : 'error.main',
-                    },
-                  }}
-                />
-              }
-              label={<PrintIcon fontSize="small" />}
-              sx={{
-                ml: 2,
-                color: 'common.white',
-                '& .MuiFormControlLabel-label': { color: 'inherit' },
-              }}
-            />
-          </Tooltip>
+          {/* Unified icon-over-switch controls */}
+          {(() => {
+            // Both switches now share the same default style as the AI improve switch
+            return (
+              <>
+                <Tooltip title={autoPrint ? 'Automatyczne drukowanie włączone' : 'Kolorowanki nie będą drukowane automatycznie'} arrow>
+                  <Box sx={{ ml: 2, pt: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <PrintIcon fontSize="small" sx={{ color: 'common.white', mt: 1, mb: 0 }} />
+                    <Switch
+                      checked={autoPrint}
+                      onChange={(e) => setAutoPrint(e.target.checked)}
+                      color={autoPrint ? 'success' : 'default'}
+                      inputProps={{ 'aria-label': 'Automatyczne drukowanie' }}
+                    />
+                  </Box>
+                </Tooltip>
+                <Tooltip title={improveEnabled ? 'Ulepszanie promptu włączone' : 'Wysyłaj oryginalny prompt'} arrow>
+                  <Box sx={{ ml: 1.5, pt: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <AutoAwesomeIcon fontSize="small" sx={{ color: 'common.white', mt: 1, mb: 0 }} />
+                    <Switch
+                      checked={improveEnabled}
+                      onChange={(e) => setImproveEnabled(e.target.checked)}
+                      color={improveEnabled ? 'success' : 'default'}
+                      inputProps={{ 'aria-label': 'Ulepszanie promptu' }}
+                    />
+                  </Box>
+                </Tooltip>
+              </>
+            );
+          })()}
         </Toolbar>
       </AppBar>
       <Box sx={{ display: 'flex', flex: 1, minHeight: 0, pt: { xs: 7, sm: 8 } }}>
@@ -555,14 +601,22 @@ export const App: React.FC = () => {
           </Stepper>
           {prompt && processMode !== 'printOnly' && (
             <Box sx={{ mt: 1.5 }}>
-              <Typography variant="subtitle2" gutterBottom>Prompt</Typography>
+              <Typography variant="subtitle2" gutterBottom>Podstawowy prompt</Typography>
               <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
                 {prompt}
               </Box>
+              {improveEnabled && improvedPrompt != null && (
+                <Box sx={{ mt: 1.5 }}>
+                  <Typography variant="subtitle2" gutterBottom>Ulepszony prompt</Typography>
+                  <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                    {improvedPrompt}
+                  </Box>
+                </Box>
+              )}
             </Box>
           )}
           {/* Subtle progress bar while steps are running */}
-          {(status === 'transcribing' || status === 'generating' || status === 'printing') && (
+          {(status === 'transcribing' || status === 'improving' || status === 'generating' || status === 'printing') && (
             <Box sx={{ mt: 1 }}>
               <Box sx={{ height: 4, bgcolor: 'action.selected', borderRadius: 999, overflow: 'hidden' }}>
                 <Box sx={{ width: '40%', height: '100%', bgcolor: 'primary.main', borderRadius: 999, animation: 'indeterminateSlide 1.6s ease-in-out infinite' }} />

@@ -67,6 +67,9 @@ export const api = {
   async generate(id: string, prompt: string): Promise<{ imageUrl: string; thumbUrl: string }>{
     return postJson('/api/generate', { id, prompt }, OPENAI_TIMEOUT);
   },
+  async improve(id: string, prompt: string): Promise<{ id: string; improved: string }>{
+    return postJson('/api/improve', { id, prompt }, OPENAI_TIMEOUT);
+  },
   async print(id: string): Promise<{ jobId: string }>{
     return postJson('/api/print', { id });
   },

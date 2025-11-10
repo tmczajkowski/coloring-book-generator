@@ -92,3 +92,37 @@ export const generateImage = async (prompt: string): Promise<Buffer> => {
   }
   throw lastErr || new Error('OpenAI image failed');
 };
+
+export const improvePrompt = async (original: string): Promise<string> => {
+  if (!config.openaiApiKey) {
+    // Fallback for local dev: return original prompt
+    return original;
+  }
+  const system = 'Jesteś asystentem, który ulepsza krótkie prompty do generowania czarno-białych kolorowanek (line art). Zwracaj wyłącznie ulepszony prompt, bez cudzysłowów, bez komentarzy.';
+  const user = `Ulepsz ten prompt tak, aby powstała kolorowanka dla dzieci: \n\n"${original}"\n\nWymagania: czarno-biała grafika liniowa, wyraźne (grubsze) kontury, brak tła, brak szarości i cieniowania, centralna kompozycja, przyjazny styl, dużo elementów do kolorowania.`;
+  logger.info('OpenAI: improve prompt call', { original });
+  const res = await fetchWithTimeout(`${OPENAI_BASE}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${config.openaiApiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user }
+      ],
+      temperature: 0.7,
+      max_tokens: 200
+    })
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`OpenAI improve failed: ${res.status} ${text}`);
+  }
+  const data: any = await res.json();
+  const improved: string | undefined = data?.choices?.[0]?.message?.content?.trim();
+  if (!improved) throw new Error('Brak treści ulepszonego promptu');
+  return improved;
+};

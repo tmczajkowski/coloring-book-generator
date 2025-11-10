@@ -9,6 +9,7 @@ import { generateRouter } from './routes/generate.js';
 import { printRouter } from './routes/print.js';
 import { historyRouter } from './routes/history.js';
 import { configRouter } from './routes/config.js';
+import { improveRouter } from './routes/improve.js';
 
 const app = express();
 
@@ -50,6 +51,7 @@ const makeRateLimit = (max: number, windowMs: number) => {
 // API routes
 app.use('/api/transcribe', makeRateLimit(10, 60_000), transcribeRouter);
 app.use('/api/generate', makeRateLimit(15, 60_000), generateRouter);
+app.use('/api/improve', makeRateLimit(20, 60_000), improveRouter);
 app.use('/api/print', printRouter);
 app.use('/api/history', historyRouter);
 app.use('/api/config', configRouter);
