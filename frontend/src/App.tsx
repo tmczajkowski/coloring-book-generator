@@ -266,7 +266,7 @@ export const App: React.FC = () => {
                 <Tooltip title="Zamknij podgląd">
                   <IconButton
                     onClick={() => setSelected(null)}
-                    sx={{ bgcolor: 'error.main', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'error.dark' } }}
+                    sx={{ bgcolor: 'common.black', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'grey.800' } }}
                     aria-label="Zamknij"
                   >
                     <CloseIcon />
@@ -279,11 +279,12 @@ export const App: React.FC = () => {
                         try {
                           setStatus('generating');
                           setPrompt(selected.prompt);
-                          const gen = await api.generate(selected.id, selected.prompt);
+                          const newId = String(Date.now());
+                          const gen = await api.generate(newId, selected.prompt);
                           setImageUrl(gen.imageUrl);
                           await refreshHistory();
                           // Re-select updated item and bust cache for preview
-                          const updated = (await api.history()).find(i => i.id === selected.id);
+                          const updated = (await api.history()).find(i => i.id === newId);
                           if (updated) setSelected(updated);
                           setPreviewBust(Date.now());
                           setStatus('done');
