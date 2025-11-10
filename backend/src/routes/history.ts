@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from 'express';
-import { deleteSession, listHistory } from '../services/storage.ts';
+import { deleteSession, listHistory } from '../services/storage.js';
+import { isValidId } from '../utils/validation.js';
 
 export const historyRouter = Router();
 
@@ -16,6 +17,7 @@ historyRouter.delete('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
     if (!id) return res.status(400).json({ error: 'Brak id' });
+    if (!isValidId(id)) return res.status(400).json({ error: 'Nieprawidłowe id' });
     await deleteSession(id);
     res.json({ ok: true });
   } catch (e: any) {

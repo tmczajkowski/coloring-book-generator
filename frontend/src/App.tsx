@@ -41,7 +41,8 @@ export const App: React.FC = () => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [selected, setSelected] = useState<HistoryItem | null>(null);
-  const [previewBust, setPreviewBust] = useState<number>(0);
+  const [previewBustToken, setPreviewBustToken] = useState<number>(0);
+  const [errorText, setErrorText] = useState<string | null>(null);
   // Auto print state synced with URL param `auto-print` and persisted to localStorage
   const [autoPrint, setAutoPrint] = useState<boolean>(() => {
     const sp = new URLSearchParams(window.location.search);
@@ -56,7 +57,12 @@ export const App: React.FC = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
-  useEffect(() => { refreshHistory(); }, []);
+  useEffect(() => {
+    // Load runtime config (timeouts) then fetch history
+    api.loadConfig().finally(() => {
+      refreshHistory();
+    });
+  }, []);
 
   // Keep URL and localStorage in sync with autoPrint state
   useEffect(() => {
@@ -78,7 +84,7 @@ export const App: React.FC = () => {
   }, [selected]);
 
   const refreshHistory = async () => {
-    try { setHistory(await api.history()); } catch {}
+    try { setHistory(await api.history()); } catch { /* ignore */ }
   };
 
   const startRecording = async () => {
@@ -108,16 +114,18 @@ export const App: React.FC = () => {
           }
           setStatus('done');
           await refreshHistory();
-        } catch (e) {
+        } catch (e: any) {
           console.error(e);
+          setErrorText(e?.message || 'Wystąpił błąd podczas przetwarzania.');
           setStatus('error');
         }
       };
       mediaRecorderRef.current = mr;
       mr.start();
       setStatus('recording');
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setErrorText('Brak uprawnień do mikrofonu lub problem z nagrywaniem.');
       setStatus('error');
     }
   };
@@ -254,7 +262,7 @@ export const App: React.FC = () => {
                 <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Box
                     component="img"
-                    src={`${selected.imageUrl}?t=${previewBust}`}
+                    src={`${selected.imageUrl}?t=${previewBustToken}`}
                     alt={selected.prompt}
                     sx={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 2, border: 1, borderColor: 'divider' }}
                   />
@@ -286,7 +294,7 @@ export const App: React.FC = () => {
                           // Re-select updated item and bust cache for preview
                           const updated = (await api.history()).find(i => i.id === newId);
                           if (updated) setSelected(updated);
-                          setPreviewBust(Date.now());
+                          setPreviewBustToken(Date.now());
                           setStatus('done');
                         } catch (e) {
                           console.error('Regenerate failed:', e);
@@ -295,6 +303,7 @@ export const App: React.FC = () => {
                       }}
                       sx={{ bgcolor: 'info.main', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'info.dark' } }}
                       aria-label="Wygeneruj ponownie"
+                      disabled={!(status === 'idle' || status === 'done' || status === 'error')}
                     >
                       <AutorenewIcon />
                     </IconButton>
@@ -317,6 +326,7 @@ export const App: React.FC = () => {
                       }}
                       sx={{ bgcolor: 'success.main', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'success.dark' } }}
                       aria-label="Drukuj"
+                      disabled={!(status === 'idle' || status === 'done' || status === 'error')}
                     >
                       <PrintIcon />
                     </IconButton>
@@ -338,6 +348,7 @@ export const App: React.FC = () => {
                       }}
                       sx={{ bgcolor: 'error.main', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'error.dark' } }}
                       aria-label="Usuń"
+                      disabled={!(status === 'idle' || status === 'done' || status === 'error')}
                     >
                       <DeleteIcon />
                     </IconButton>
@@ -419,7 +430,7 @@ export const App: React.FC = () => {
           )}
           {status === 'error' && (
             <Alert severity="error" sx={{ mt: 2 }}>
-              Wystąpił błąd. Spróbuj ponownie.
+              {errorText || 'Wystąpił błąd. Spróbuj ponownie.'}
             </Alert>
           )}
         </DialogContent>

@@ -17,4 +17,3 @@ export const PRINTER_MEDIA_A4 = 'iso_a4_210x297mm';
 export const PRINTER_SCALING_FIT = 'fit';
 export const PRINTER_QUALITY_DRAFT = 3; // 3=draft, 4=normal, 5=high
 export const PRINTER_DOCUMENT_NAME = FILE_IMAGE_JPG;
-

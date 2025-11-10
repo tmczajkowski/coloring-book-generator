@@ -1,11 +1,22 @@
 import { Router, type Request, type Response } from 'express';
 import multer from 'multer';
 import path from 'path';
-import { createSession, saveAudio, savePrompt } from '../services/storage.ts';
-import { transcribeAudio } from '../services/openai.ts';
-import { logger } from '../utils/logger.ts';
+import { createSession, saveAudio, savePrompt } from '../services/storage.js';
+import { transcribeAudio } from '../services/openai.js';
+import { logger } from '../utils/logger.js';
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ok = (
+      file.mimetype.startsWith('audio/') ||
+      ['video/webm'].includes(file.mimetype)
+    );
+    if (!ok) return cb(new Error('Niedozwolony typ pliku'));
+    cb(null, true);
+  }
+});
 
 export const transcribeRouter = Router();
 

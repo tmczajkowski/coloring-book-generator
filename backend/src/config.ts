@@ -14,4 +14,5 @@ export const config = {
   openaiApiKey: process.env.OPENAI_API_KEY || '',
   printerUri: process.env.PRINTER_URI || 'ipp://192.168.1.188/ipp/print',
   imageModel: process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1',
+  openaiTimeoutMs: Number(process.env.OPENAI_TIMEOUT_MS || 120000),
 };

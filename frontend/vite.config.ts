@@ -13,6 +13,8 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src')
     }
+  },
+  define: {
+    'import.meta.env.OPENAI_TIMEOUT_MS': JSON.stringify(process.env.OPENAI_TIMEOUT_MS || '')
   }
 });
-

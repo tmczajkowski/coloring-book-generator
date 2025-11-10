@@ -1,22 +1,30 @@
 import fs from 'fs/promises';
 import fsSync from 'fs';
 import path from 'path';
-import { config } from '../config.ts';
-import { logger } from '../utils/logger.ts';
-import { EXT_JPG, EXT_PNG, FILE_IMAGE_JPG, FILE_IMAGE_PNG } from '../constants.ts';
+import { config } from '../config.js';
+import { logger } from '../utils/logger.js';
+import { EXT_JPG, EXT_PNG, FILE_IMAGE_JPG, FILE_IMAGE_PNG } from '../constants.js';
+import { isValidId } from '../utils/validation.js';
 
 const ensureDir = async (dir: string) => {
   await fs.mkdir(dir, { recursive: true });
 };
 
-export const getSessionDir = (id: string) => path.join(config.dataDir, id);
+export const getSessionDir = (id: string) => {
+  if (!isValidId(id)) {
+    throw new Error('Invalid session id');
+  }
+  return path.join(config.dataDir, id);
+};
 
 export const initStorage = async () => {
   await ensureDir(config.dataDir);
 };
 
 export const createSession = async (id?: string) => {
-  const sessionId = id || String(Date.now());
+  const candidate = id || String(Date.now());
+  if (!isValidId(candidate)) throw new Error('Invalid session id');
+  const sessionId = candidate;
   const dir = getSessionDir(sessionId);
   await ensureDir(dir);
   await fs.writeFile(path.join(dir, 'meta.json'), JSON.stringify({ id: sessionId, createdAt: Date.now() }, null, 2));
