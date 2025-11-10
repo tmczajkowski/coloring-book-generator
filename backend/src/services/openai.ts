@@ -52,7 +52,7 @@ export const generateImage = async (prompt: string): Promise<Buffer> => {
   if (!config.openaiApiKey) {
     throw new Error('Brak konfiguracji OPENAI_API_KEY');
   }
-  const p = `Narysuj czarno-białą ilustrację do kolorowania (line art, wyraźne kontury, bez tła, brak szarości, brak cieniowania), temat: ${prompt}. Styl przyjazny dla dzieci.`;
+  const p = `Narysuj czarno-białą ilustrację do kolorowania (line art, wyraźne kontury, bez tła, brak szarości, brak cieniowania), temat: '${prompt}'. Styl przyjazny dla dzieci.`;
   const model = config.imageModel || 'gpt-image-1';
   // Map model -> preferred size. If not present, omit size to use API default.
   const MODEL_SIZE_MAP: Record<string, string> = {
@@ -67,11 +67,12 @@ export const generateImage = async (prompt: string): Promise<Buffer> => {
   let lastErr: any;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
+      const isDalle3 = model === 'dall-e-3';
       const result = await client.images.generate({
         model,
         prompt: p,
         ...(size ? { size } : {}),
-        response_format: 'b64_json',
+        ...(isDalle3 ? { response_format: 'b64_json' } : {}),
       } as any);
       const b64 = (result as any)?.data?.[0]?.b64_json;
       if (!b64) throw new Error('Brak danych obrazu z OpenAI');
@@ -105,7 +106,10 @@ export const improvePrompt = async (original: string): Promise<string> => {
   if (isModern) {
     const resp = await (client as any).responses.create({
       model: chatModel,
-      input: `${system}\n\n${user}`,
+      input: [
+        { role: 'system', content: [{ type: 'input_text', text: system }] },
+        { role: 'user', content: [{ type: 'input_text', text: user }] },
+      ],
       max_output_tokens: 200,
     });
     improved = extractResponsesText(resp);
