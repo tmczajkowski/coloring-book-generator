@@ -88,3 +88,14 @@ export const markPrinted = async (id: string) => {
     logger.warn('Cannot mark printed for', id, e);
   }
 };
+
+export const deleteSession = async (id: string) => {
+  const dir = getSessionDir(id);
+  try {
+    await fs.rm(dir, { recursive: true, force: true });
+    logger.info('Storage: deleted session', { id, dir });
+  } catch (e) {
+    logger.error('Storage: failed to delete session', { id, dir, e });
+    throw e;
+  }
+};

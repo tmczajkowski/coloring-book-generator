@@ -24,6 +24,10 @@ export const api = {
     const res = await fetch('/api/history');
     if (!res.ok) throw new Error(await res.text());
     return res.json();
+  },
+  async remove(id: string): Promise<{ ok: true }>{
+    const res = await fetch(`/api/history/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   }
 };
-

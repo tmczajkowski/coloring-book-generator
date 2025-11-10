@@ -17,6 +17,8 @@ export const transcribeAudio = async (audioPath: string): Promise<string> => {
   const form = new FormData();
   form.append('file', blob, 'audio.webm');
   form.append('model', 'whisper-1');
+  // Force Polish language for better accuracy with Polish speech
+  form.append('language', 'pl');
 
   const res = await fetch(`${OPENAI_BASE}/audio/transcriptions`, {
     method: 'POST',

@@ -15,17 +15,21 @@ import { api, HistoryItem } from './api/client';
     Switch,
     FormControlLabel,
     Tooltip,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Stepper,
-    Step,
-    StepLabel,
+    IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Stepper,
+  Step,
+  StepLabel,
       Alert,
   } from '@mui/material';
   import MicIcon from '@mui/icons-material/Mic';
   import PrintIcon from '@mui/icons-material/Print';
+  import CloseIcon from '@mui/icons-material/Close';
+  import AutorenewIcon from '@mui/icons-material/Autorenew';
+  import DeleteIcon from '@mui/icons-material/Delete';
   import { keyframes } from '@mui/system';
 
 type Status = 'idle' | 'recording' | 'transcribing' | 'generating' | 'printing' | 'done' | 'error';
@@ -36,6 +40,8 @@ export const App: React.FC = () => {
   const [id, setId] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [selected, setSelected] = useState<HistoryItem | null>(null);
+  const [previewBust, setPreviewBust] = useState<number>(0);
   // Auto print state synced with URL param `auto-print` and persisted to localStorage
   const [autoPrint, setAutoPrint] = useState<boolean>(() => {
     const sp = new URLSearchParams(window.location.search);
@@ -60,6 +66,16 @@ export const App: React.FC = () => {
     window.history.replaceState({}, '', url);
     try { localStorage.setItem('autoPrint', String(autoPrint)); } catch {}
   }, [autoPrint]);
+
+  // Close preview with ESC key
+  useEffect(() => {
+    if (!selected) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelected(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selected]);
 
   const refreshHistory = async () => {
     try { setHistory(await api.history()); } catch {}
@@ -172,24 +188,52 @@ export const App: React.FC = () => {
           </Tooltip>
         </Toolbar>
       </AppBar>
-      <Toolbar />
-      <Box sx={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        <Box component="aside" sx={{ width: 320, borderRight: 1, borderColor: 'divider', p: 2, overflow: 'auto' }}>
+      <Box sx={{ display: 'flex', flex: 1, minHeight: 0, pt: { xs: 7, sm: 8 } }}>
+        <Box component="aside" sx={{ width: 480, borderRight: 1, borderColor: 'divider', p: 2, overflow: 'auto' }}>
           <Typography variant="h6" gutterBottom>Historia</Typography>
           <List dense>
             {history.map(item => (
               <React.Fragment key={item.id}>
-                <ListItem alignItems="flex-start">
+                <ListItem
+                  alignItems="flex-start"
+                  onClick={() => item.imageUrl && setSelected(item)}
+                  sx={{ cursor: item.imageUrl ? 'pointer' : 'default', bgcolor: selected?.id === item.id ? 'action.selected' : undefined }}
+                >
                   <ListItemText
                     primaryTypographyProps={{ variant: 'subtitle1' }}
                     secondaryTypographyProps={{ component: 'div' }}
-                    primary={new Date(item.createdAt).toLocaleString()}
+                    primary={
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: 1 }}>
+                        <span>{new Date(item.createdAt).toLocaleString()}</span>
+                        <Tooltip title="Usuń kolorowankę">
+                          <IconButton
+                            edge="end"
+                            size="small"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                await api.remove(item.id);
+                                if (selected?.id === item.id) setSelected(null);
+                                await refreshHistory();
+                              } catch (err) {
+                                console.error('Delete failed:', err);
+                                setStatus('error');
+                              }
+                            }}
+                            sx={{ p: 0.25, bgcolor: 'error.main', color: 'common.white', '&:hover': { bgcolor: 'error.dark' } }}
+                            aria-label="Usuń"
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    }
                     secondary={
                       <>
                         <Typography variant="body2" color="text.primary" sx={{ mb: 0.5 }}>{item.prompt}</Typography>
                         {item.imageUrl && (
-                          <Box sx={{ mt: 1 }}>
-                            <Box component="img" src={item.imageUrl} alt="podgląd" sx={{ width: '100%', height: 140, borderRadius: 2, objectFit: 'cover', border: 1, borderColor: 'divider' }} />
+                          <Box sx={{ mt: 1, borderRadius: 2, border: 1, borderColor: 'divider', overflow: 'hidden' }}>
+                            <Box component="img" src={item.imageUrl} alt="podgląd" sx={{ width: '100%', height: 'auto', display: 'block' }} />
                           </Box>
                         )}
                       </>
@@ -202,30 +246,129 @@ export const App: React.FC = () => {
           </List>
         </Box>
 
-        <Box component="main" sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
-          <Stack spacing={2} alignItems="center">
-            <Fab
-              aria-label="Nagraj prompt głosowy"
-              color="error"
-              size="large"
-              sx={{
-                width: 168,
-                height: 168,
-                animation: canRecord ? `${pulse} 1.8s ease-in-out infinite` : 'none',
-              }}
-              disabled={!canRecord}
-              onClick={canRecord ? startRecording : undefined}
-            >
-              <MicIcon sx={{ fontSize: 56 }} />
-            </Fab>
+        <Box component="main" sx={{ flex: 1, position: 'relative', p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {(selected && status !== 'recording') ? (
+            <Box sx={{ display: 'flex', width: '100%', height: '100%', gap: 2 }}>
+              {/* Image area on the left (bigger) */}
+              {selected.imageUrl && (
+                <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Box
+                    component="img"
+                    src={`${selected.imageUrl}?t=${previewBust}`}
+                    alt={selected.prompt}
+                    sx={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 2, border: 1, borderColor: 'divider' }}
+                  />
+                </Box>
+              )}
 
-            {status === 'recording' && (
-              <Stack direction="row" spacing={1}>
-                <Button variant="contained" color="success" onClick={stopRecording}>Stop</Button>
-                <Button variant="contained" color="warning" onClick={cancelRecording}>Kosz</Button>
-              </Stack>
-            )}
-          </Stack>
+              {/* Actions column on the right (vertical) */}
+              <Box sx={{ width: 64, display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center' }}>
+                <Tooltip title="Zamknij podgląd">
+                  <IconButton
+                    onClick={() => setSelected(null)}
+                    sx={{ bgcolor: 'error.main', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'error.dark' } }}
+                    aria-label="Zamknij"
+                  >
+                    <CloseIcon />
+                  </IconButton>
+                </Tooltip>
+                {selected.imageUrl && (
+                  <Tooltip title="Wygeneruj ponownie">
+                    <IconButton
+                      onClick={async () => {
+                        try {
+                          setStatus('generating');
+                          setPrompt(selected.prompt);
+                          const gen = await api.generate(selected.id, selected.prompt);
+                          setImageUrl(gen.imageUrl);
+                          await refreshHistory();
+                          // Re-select updated item and bust cache for preview
+                          const updated = (await api.history()).find(i => i.id === selected.id);
+                          if (updated) setSelected(updated);
+                          setPreviewBust(Date.now());
+                          setStatus('done');
+                        } catch (e) {
+                          console.error('Regenerate failed:', e);
+                          setStatus('error');
+                        }
+                      }}
+                      sx={{ bgcolor: 'info.main', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'info.dark' } }}
+                      aria-label="Wygeneruj ponownie"
+                    >
+                      <AutorenewIcon />
+                    </IconButton>
+                  </Tooltip>
+                )}
+                {selected.imageUrl && (
+                  <Tooltip title="Drukuj kolorowankę">
+                    <IconButton
+                      onClick={async () => {
+                        try {
+                          setId(selected.id);
+                          setStatus('printing');
+                          await api.print(selected.id);
+                          setStatus('done');
+                          await refreshHistory();
+                        } catch (e) {
+                          console.error('Print failed:', e);
+                          setStatus('error');
+                        }
+                      }}
+                      sx={{ bgcolor: 'success.main', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'success.dark' } }}
+                      aria-label="Drukuj"
+                    >
+                      <PrintIcon />
+                    </IconButton>
+                  </Tooltip>
+                )}
+                {selected && (
+                  <Tooltip title="Usuń kolorowankę">
+                    <IconButton
+                      onClick={async () => {
+                        try {
+                          await api.remove(selected.id);
+                          setSelected(null);
+                          await refreshHistory();
+                          setStatus('idle');
+                        } catch (e) {
+                          console.error('Delete failed:', e);
+                          setStatus('error');
+                        }
+                      }}
+                      sx={{ bgcolor: 'error.main', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'error.dark' } }}
+                      aria-label="Usuń"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </Box>
+            </Box>
+          ) : (
+            <Stack spacing={2} alignItems="center">
+              <Fab
+                aria-label="Nagraj prompt głosowy"
+                color="error"
+                size="large"
+                sx={{
+                  width: 168,
+                  height: 168,
+                  animation: canRecord ? `${pulse} 1.8s ease-in-out infinite` : 'none',
+                }}
+                disabled={!canRecord}
+                onClick={canRecord ? startRecording : undefined}
+              >
+                <MicIcon sx={{ fontSize: 56 }} />
+              </Fab>
+
+              {status === 'recording' && (
+                <Stack direction="row" spacing={1}>
+                  <Button variant="contained" color="success" onClick={stopRecording}>Stop</Button>
+                  <Button variant="contained" color="warning" onClick={cancelRecording}>Kosz</Button>
+                </Stack>
+              )}
+            </Stack>
+          )}
         </Box>
       </Box>
 
@@ -239,6 +382,14 @@ export const App: React.FC = () => {
               </Step>
             ))}
           </Stepper>
+          {prompt && (
+            <Box sx={{ mt: 1.5 }}>
+              <Typography variant="subtitle2" gutterBottom>Prompt</Typography>
+              <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                {prompt}
+              </Box>
+            </Box>
+          )}
           {/* Subtle progress bar while steps are running */}
           {(status === 'transcribing' || status === 'generating' || status === 'printing') && (
             <Box sx={{ mt: 1 }}>

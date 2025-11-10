@@ -10,7 +10,7 @@ export const FILE_IMAGE_PNG = `${IMAGE_BASENAME}.${EXT_PNG}`;
 
 // OpenAI image defaults
 export const OPENAI_IMAGE_SIZE = '1536x1024';
-export const OPENAI_IMAGE_QUALITY = 'low';
+export const OPENAI_IMAGE_QUALITY = 'high';
 
 // Printing defaults (IPP)
 export const PRINTER_MEDIA_A4 = 'iso_a4_210x297mm';
