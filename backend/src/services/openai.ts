@@ -1,21 +1,33 @@
 import fs from 'fs/promises';
+import fsSync from 'fs';
+import OpenAI from 'openai';
 import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
-import { OPENAI_IMAGE_SIZE } from '../constants.js';
 
-const OPENAI_BASE = 'https://api.openai.com/v1';
+const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+function getClient() {
+  return new OpenAI({ apiKey: config.openaiApiKey, timeout: config.openaiTimeoutMs });
+}
 
-async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit & { timeoutMs?: number } = {}) {
-  const ac = new AbortController();
-  const t = setTimeout(() => ac.abort(), init.timeoutMs ?? config.openaiTimeoutMs);
-  try {
-    const res = await fetch(input, { ...init, signal: ac.signal });
-    return res;
-  } finally {
-    clearTimeout(t);
+function extractResponsesText(resp: any): string | undefined {
+  const t = resp?.output_text;
+  if (typeof t === 'string' && t.trim()) return t.trim();
+  const outputs = resp?.output;
+  if (Array.isArray(outputs)) {
+    const parts: string[] = [];
+    for (const o of outputs) {
+      const cont = o?.content;
+      if (Array.isArray(cont)) {
+        for (const c of cont) {
+          if (c?.type === 'output_text' && typeof c?.text === 'string') parts.push(c.text);
+        }
+      }
+    }
+    const joined = parts.join(' ').trim();
+    if (joined) return joined;
   }
+  return undefined;
 }
 
 export const transcribeAudio = async (audioPath: string): Promise<string> => {
@@ -26,21 +38,14 @@ export const transcribeAudio = async (audioPath: string): Promise<string> => {
   const fileBuf = await fs.readFile(audioPath);
   logger.info('OpenAI: transcribe call', { audioPath, bytes: fileBuf.byteLength });
 
-  const blob = new Blob([fileBuf], { type: 'audio/webm' });
-  const form = new FormData();
-  form.append('file', blob, 'audio.webm');
-  form.append('model', config.sttModel || 'whisper-1');
-  // Force Polish language for better accuracy with Polish speech
-  form.append('language', 'pl');
-
-  const res = await fetchWithTimeout(`${OPENAI_BASE}/audio/transcriptions`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${config.openaiApiKey}` },
-    body: form
+  const client = getClient();
+  const fileStream = fsSync.createReadStream(audioPath);
+  const resp = await client.audio.transcriptions.create({
+    file: fileStream as any,
+    model: config.sttModel || 'whisper-1',
+    language: 'pl',
   });
-  if (!res.ok) throw new Error(`OpenAI transcribe failed: ${res.status} ${await res.text()}`);
-  const data: any = await res.json();
-  return data.text || '';
+  return (resp as any).text || '';
 };
 
 export const generateImage = async (prompt: string): Promise<Buffer> => {
@@ -48,43 +53,35 @@ export const generateImage = async (prompt: string): Promise<Buffer> => {
     throw new Error('Brak konfiguracji OPENAI_API_KEY');
   }
   const p = `Narysuj czarno-białą ilustrację do kolorowania (line art, wyraźne kontury, bez tła, brak szarości, brak cieniowania), temat: ${prompt}. Styl przyjazny dla dzieci.`;
-  logger.info('OpenAI: image generation prompt', { original: prompt, composed: p, model: config.imageModel || 'gpt-image-1', size: OPENAI_IMAGE_SIZE });
+  const model = config.imageModel || 'gpt-image-1';
+  // Map model -> preferred size. If not present, omit size to use API default.
+  const MODEL_SIZE_MAP: Record<string, string> = {
+    'gpt-image-1': '1536x1024',
+    'dall-e-3': '1792x1024',
+  };
+  const size = MODEL_SIZE_MAP[model as keyof typeof MODEL_SIZE_MAP];
+  logger.info('OpenAI: image generation prompt', { original: prompt, composed: p, model, size: size ?? 'default' });
+
+  const client = getClient();
   // simple retry for transient errors (2 retries). Do NOT retry user errors (e.g., moderation).
   let lastErr: any;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const res = await fetchWithTimeout(`${OPENAI_BASE}/images/generations`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${config.openaiApiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: config.imageModel || 'gpt-image-1',
-          prompt: p,
-          size: OPENAI_IMAGE_SIZE
-        })
-      });
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        // Mark 429/5xx as transient; 4xx as non-retryable (user error)
-        if (res.status === 429 || res.status >= 500) {
-          throw new Error(`OpenAI image transient: ${res.status} ${text}`);
-        } else {
-          // e.g. moderation_blocked
-          throw new Error(`OpenAI image failed: ${res.status} ${text}`);
-        }
-      }
-      const data: any = await res.json();
-      const b64 = data?.data?.[0]?.b64_json;
+      const result = await client.images.generate({
+        model,
+        prompt: p,
+        ...(size ? { size } : {}),
+        response_format: 'b64_json',
+      } as any);
+      const b64 = (result as any)?.data?.[0]?.b64_json;
       if (!b64) throw new Error('Brak danych obrazu z OpenAI');
       return Buffer.from(b64, 'base64');
     } catch (e: any) {
       const msg = String(e?.message || e);
       lastErr = e;
-      logger.warn('OpenAI: image attempt failed', { attempt, error: msg });
-      // Only retry transient errors
-      const isTransient = msg.includes('transient');
+      logger.warn('OpenAI: image attempt failed', { attempt, error: msg, status: e?.status });
+      const status = e?.status as number | undefined;
+      const isTransient = status === 429 || (status !== undefined && status >= 500);
       if (!isTransient) throw e;
       if (attempt < 2) await delay(500 * Math.pow(2, attempt));
     }
@@ -100,28 +97,43 @@ export const improvePrompt = async (original: string): Promise<string> => {
   const system = 'Jesteś asystentem, który ulepsza krótkie prompty do generowania czarno-białych kolorowanek (line art). Zwracaj wyłącznie ulepszony prompt, bez cudzysłowów, bez komentarzy.';
   const user = `Ulepsz ten prompt tak, aby powstała kolorowanka dla dzieci: \n\n"${original}"\n\nWymagania: czarno-biała grafika liniowa, wyraźne (grubsze) kontury, brak tła, brak szarości i cieniowania, centralna kompozycja, przyjazny styl, dużo elementów do kolorowania.`;
   logger.info('OpenAI: improve prompt call', { original });
-  const res = await fetchWithTimeout(`${OPENAI_BASE}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${config.openaiApiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model: config.textModel || 'gpt-4o-mini',
+
+  const client = getClient();
+  const chatModel = config.textModel || 'gpt-4o-mini';
+  const isModern = /^(gpt-4o|gpt-4\.1|gpt-5|o)/.test(chatModel);
+  let improved: string | undefined;
+  if (isModern) {
+    const resp = await (client as any).responses.create({
+      model: chatModel,
+      input: `${system}\n\n${user}`,
+      max_output_tokens: 200,
+    });
+    improved = extractResponsesText(resp);
+    // Fallback: try chat.completions without unsupported params
+    if (!improved) {
+      try {
+        const cc = await client.chat.completions.create({
+          model: chatModel,
+          messages: [
+            { role: 'system', content: system },
+            { role: 'user', content: user },
+          ],
+        } as any);
+        improved = (cc as any)?.choices?.[0]?.message?.content?.trim?.();
+      } catch {}
+    }
+  } else {
+    const resp = await client.chat.completions.create({
+      model: chatModel,
       messages: [
         { role: 'system', content: system },
-        { role: 'user', content: user }
+        { role: 'user', content: user },
       ],
       temperature: 0.7,
-      max_tokens: 200
-    })
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`OpenAI improve failed: ${res.status} ${text}`);
+      max_tokens: 200,
+    });
+    improved = (resp as any)?.choices?.[0]?.message?.content?.trim();
   }
-  const data: any = await res.json();
-  const improved: string | undefined = data?.choices?.[0]?.message?.content?.trim();
   if (!improved) throw new Error('Brak treści ulepszonego promptu');
   return improved;
 };
