@@ -30,6 +30,7 @@ import { api, HistoryItem } from './api/client';
   import CloseIcon from '@mui/icons-material/Close';
   import AutorenewIcon from '@mui/icons-material/Autorenew';
   import DeleteIcon from '@mui/icons-material/Delete';
+  import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
   import { keyframes } from '@mui/system';
 
 type Status = 'idle' | 'recording' | 'transcribing' | 'generating' | 'printing' | 'done' | 'error';
@@ -56,6 +57,7 @@ export const App: React.FC = () => {
   });
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const cancelledRef = useRef<boolean>(false);
 
   useEffect(() => {
     // Load runtime config (timeouts) then fetch history
@@ -92,8 +94,11 @@ export const App: React.FC = () => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       chunksRef.current = [];
+      cancelledRef.current = false;
       mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.onstop = async () => {
+        // If recording was cancelled, do not process anything.
+        if (cancelledRef.current) return;
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         setStatus('transcribing');
         try {
@@ -136,8 +141,15 @@ export const App: React.FC = () => {
   };
 
   const cancelRecording = () => {
-    mediaRecorderRef.current?.stop();
-    mediaRecorderRef.current?.stream.getTracks().forEach(t => t.stop());
+    // Mark as cancelled so onstop handler is ignored
+    cancelledRef.current = true;
+    if (mediaRecorderRef.current) {
+      // Detach handlers and stop gracefully
+      mediaRecorderRef.current.ondataavailable = null as any;
+      mediaRecorderRef.current.onstop = null as any;
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
+    }
     mediaRecorderRef.current = null;
     chunksRef.current = [];
     setStatus('idle');
@@ -375,8 +387,8 @@ export const App: React.FC = () => {
 
               {status === 'recording' && (
                 <Stack direction="row" spacing={1}>
-                  <Button variant="contained" color="success" onClick={stopRecording}>Stop</Button>
-                  <Button variant="contained" color="warning" onClick={cancelRecording}>Kosz</Button>
+                  <Button variant="contained" color="success" onClick={stopRecording} startIcon={<AutoAwesomeIcon />}>Generuj</Button>
+                  <Button variant="contained" color="error" onClick={cancelRecording} startIcon={<CloseIcon />}>Anuluj</Button>
                 </Stack>
               )}
             </Stack>
