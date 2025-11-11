@@ -123,14 +123,5 @@ export const api = {
       if (!res.ok) throw new Error(await safeText(res));
       return res.json();
     });
-  },
-  async uploadReference(id: string, file: File): Promise<{ message: string }> {
-    const form = new FormData();
-    form.append('reference', file);
-    return withTimeout(async (signal) => {
-      const res = await safeFetch(`/api/generate/reference/${id}`, { method: 'POST', body: form, signal });
-      if (!res.ok) throw new Error(await safeText(res));
-      return res.json();
-    });
   }
 };

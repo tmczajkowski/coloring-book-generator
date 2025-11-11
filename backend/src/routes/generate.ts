@@ -1,5 +1,4 @@
 import { Router, type Request, type Response } from 'express';
-import multer from 'multer';
 import { saveImageBuffer, createSession, getSessionDir, readMeta, updateMeta } from '../services/storage.js';
 import { generateImage, generateImageWithReferences, uploadReferenceFiles } from '../services/openai.js';
 import { logger } from '../utils/logger.js';
@@ -10,31 +9,6 @@ import path from 'path';
 import { isValidId } from '../utils/validation.js';
 
 export const generateRouter = Router();
-
-const upload = multer({ storage: multer.memoryStorage() });
-
-generateRouter.post('/reference/:id', upload.single('reference'), async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    if (!isValidId(id)) return res.status(400).json({ error: 'Nieprawidłowe id' });
-    if (!req.file) return res.status(400).json({ error: 'Brak pliku' });
-
-    const dir = getSessionDir(id);
-    if (!fs.existsSync(dir)) {
-      await createSession(id);
-    }
-
-    const referencePath = path.join(dir, 'reference.jpg');
-    await sharp(req.file.buffer).jpeg({ quality: 95 }).toFile(referencePath);
-
-    await updateMeta(id, { hasReference: true });
-
-    res.json({ message: 'Reference image uploaded successfully.' });
-  } catch (e: any) {
-    logger.error('Reference upload error', e);
-    res.status(500).json({ error: e?.message || 'Reference upload error' });
-  }
-});
 
 generateRouter.post('/', async (req: Request, res: Response) => {
   try {
@@ -68,12 +42,6 @@ generateRouter.post('/', async (req: Request, res: Response) => {
       try {
         const meta = await readMeta(id);
         const refs: string[] = Array.isArray(meta?.references) ? meta.references : [];
-        if (meta?.hasReference) {
-          const referencePath = path.join(getSessionDir(id), 'reference.jpg');
-          if (fs.existsSync(referencePath)) {
-            refs.push(referencePath);
-          }
-        }
         if (refs.length > 0) {
           const { fileIds } = await uploadReferenceFiles(refs);
           if (fileIds.length > 0) {

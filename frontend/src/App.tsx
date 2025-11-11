@@ -100,8 +100,6 @@ export const App: React.FC = () => {
     try { const saved = localStorage.getItem('forceHighQuality'); if (saved != null) return saved === 'true'; } catch {}
     return false;
   });
-  const [referenceImage, setReferenceImage] = useState<File | null>(null);
-  const [referenceImagePreview, setReferenceImagePreview] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const cancelledRef = useRef<boolean>(false);
@@ -182,17 +180,6 @@ export const App: React.FC = () => {
   const sfxSuccess = () => { if (sfxEnabled) { playTone(660, 0.09); setTimeout(() => playTone(880, 0.12), 90); } };
   const sfxError = () => { if (sfxEnabled) { playTone(260, 0.1); setTimeout(() => playTone(200, 0.16), 110); } };
 
-  const uploadReference = async (id: string) => {
-    if (referenceImage) {
-      try {
-        await api.uploadReference(id, referenceImage);
-      } catch (e) {
-        console.error('Reference upload failed', e);
-        // Don't block generation if reference upload fails
-      }
-    }
-  };
-
   const startRecording = async () => {
     try {
       sfxClick();
@@ -216,7 +203,6 @@ export const App: React.FC = () => {
           const { id, prompt } = await api.transcribe(blob);
           setId(id);
           setPrompt(prompt);
-          await uploadReference(id);
           let finalPrompt = prompt;
           if (improveEnabled) {
             setStatus('improving');
@@ -463,7 +449,6 @@ export const App: React.FC = () => {
       setPrompt(text);
       setImprovedPrompt(null);
       setFoundReferences(null);
-      await uploadReference(newId);
       let finalPrompt = text;
       if (improveEnabled) {
         setStatus('improving');
@@ -945,63 +930,26 @@ export const App: React.FC = () => {
             <Stack spacing={2} alignItems="center">
               <Box sx={{ position: 'relative', display: 'inline-grid' }}>
                 {/* Mic button */}
-                              <Fab
-                                aria-label="Nagraj prompt głosowy"
-                                color="error"
-                                size="large"
-                                sx={{
-                                  width: { xs: 96, sm: 168 },
-                                  height: { xs: 96, sm: 168 },
-                                  animation: status === 'recording' ? `${recordPulse} 1.4s ease-in-out infinite` : (canRecord ? `${pulse} 1.8s ease-in-out infinite` : 'none'),
-                                  '&.Mui-disabled': {
-                                    bgcolor: 'error.main',
-                                    color: 'common.white',
-                                    opacity: 1,
-                                  },
-                                }}
-                                disabled={!canRecord}
-                                onClick={canRecord ? startRecording : undefined}
-                              >
-                                <MicIcon sx={{ fontSize: { xs: 36, sm: 56 } }} />
-                              </Fab>
-                                            <input
-                                              type="file"
-                                              accept="image/*"
-                                              style={{ display: 'none' }}
-                                              id="reference-image-upload"
-                                              onChange={(e) => {
-                                                const file = e.target.files?.[0] || null;
-                                                setReferenceImage(file);
-                                                if (file) {
-                                                  const reader = new FileReader();
-                                                  reader.onloadend = () => {
-                                                    setReferenceImagePreview(reader.result as string);
-                                                  };
-                                                  reader.readAsDataURL(file);
-                                                } else {
-                                                  setReferenceImagePreview(null);
-                                                }
-                                              }}
-              />
-              <label htmlFor="reference-image-upload">
-                <Button component="span" variant="contained" color="primary">
-                  Upload Reference
-                </Button>
-              </label>
-              {referenceImagePreview && (
-                <Box sx={{ mt: 2, position: 'relative' }}>
-                  <img src={referenceImagePreview} alt="Reference preview" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }} />
-                  <IconButton
-                    sx={{ position: 'absolute', top: 0, right: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', color: 'white' }}
-                    onClick={() => {
-                      setReferenceImage(null);
-                      setReferenceImagePreview(null);
-                    }}
-                  >
-                    <CloseIcon />
-                  </IconButton>
-                </Box>
-              )}
+                <Fab
+                aria-label="Nagraj prompt głosowy"
+                color="error"
+                size="large"
+                sx={{
+                  width: { xs: 96, sm: 168 },
+                  height: { xs: 96, sm: 168 },
+                  animation: status === 'recording' ? `${recordPulse} 1.4s ease-in-out infinite` : (canRecord ? `${pulse} 1.8s ease-in-out infinite` : 'none'),
+                  '&.Mui-disabled': {
+                    bgcolor: 'error.main',
+                    color: 'common.white',
+                    opacity: 1,
+                  },
+                }}
+                disabled={!canRecord}
+                onClick={canRecord ? startRecording : undefined}
+              >
+                <MicIcon sx={{ fontSize: { xs: 36, sm: 56 } }} />
+                </Fab>
+
                 {/* Idea icons around mic (emoji-only) */}
                 {ideasVisible && status === 'idle' && (() => {
                   const catalog = [
