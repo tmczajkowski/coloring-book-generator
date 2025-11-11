@@ -27,10 +27,13 @@ generateRouter.post('/', async (req: Request, res: Response) => {
     }
     // Nie nadpisuj podstawowego promptu (pochodzi z transkrypcji).
     // Jeśli meta.prompt istnieje i różni się od przekazanego promptu, zapisz jako improvedPrompt.
+    // Jeśli meta.prompt nie istnieje, zapisz nowy prompt jako podstawowy.
     try {
       const meta = await readMeta(id);
       if (meta?.prompt && meta.prompt !== prompt) {
         await updateMeta(id, { improvedPrompt: prompt });
+      } else if (!meta?.prompt) {
+        await updateMeta(id, { prompt });
       }
     } catch {}
     try {

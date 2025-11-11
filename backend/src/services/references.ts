@@ -42,7 +42,7 @@ export const detectReferences = async (userPrompt: string): Promise<ReferenceDet
   let content: string | undefined;
   try {
     const resp = await client.chat.completions.create({
-      model: config.textModel || 'gpt-4o-mini',
+      model: config.textModel || 'gpt-4o',
       messages: [
         { role: 'user', content: userMessage },
       ],
@@ -56,6 +56,7 @@ export const detectReferences = async (userPrompt: string): Promise<ReferenceDet
   }
   if (!content) throw new Error('Brak odpowiedzi z AI dla wyszukiwania referencji');
   try {
+    logger.info('References: not parsed content', { content });
     const parsed = JSON.parse(content);
     let refs: string[] = Array.isArray(parsed?.references) ? parsed.references : [];
     refs = refs.filter((n: string) => typeof n === 'string' && available.includes(n));

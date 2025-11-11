@@ -14,7 +14,7 @@ export const OPENAI_IMAGE_SIZE = '1536x1024';
 // Prompts
 export const PROMPT_COLORING_BOOK = `Narysuj czarno-białą ilustrację do kolorowania (line art, wyraźne kontury, bez tła, brak szarości, brak cieniowania). Styl przyjazny dla dzieci. Nie dodawaj żadnego tekstu na obrazku, chyba ze jest to wprost powiedziane (to, że chce aby np. wygenerować Wiktora to nie znaczy, że chce napis Wiktor). Temat: `;
 export const PROMPT_IMPROVE = `Ulepsz ten prompt tak, aby powstała kolorowanka dla dzieci. Zmien tylko zawarotść kolorowanki, a nie to jak kolorowanka ma wygladać, bo tym zajmuje sie cos innego. Zwroc tylko elementy na kolorowance. Oryginalny prompt: `;
-export const PROMPT_DETECT_REFERENCES = `Wyszukaj wszystkie pliki referencyjne i zwróć jes w postaci json: { "references": ["plik1.jpg", "plik2.png"] } — tylko istniejące nazwy. Możesz zwrócić pustą listę. Pliki referencyjne podpasuj pod prompt.`;
+export const PROMPT_DETECT_REFERENCES = `Wyszukaj wszystkie pliki referencyjne i zwróć je w postaci json: { "references": ["plik1.jpg", "plik2.png"] } — tylko istniejące nazwy. Możesz zwrócić pustą listę. Pliki referencyjne mają w jakikolwiek sposób pasować do promta. np. jak jest plik Patryk - Tata.jpg i w jakikolwiek sposób wspomnę o tacie lub Patryku to masz zwrócić ten plik jeeli pasuje doo tego prompta.`;
 
 // Printing defaults (IPP)
 export const PRINTER_MEDIA_A4 = 'iso_a4_210x297mm';

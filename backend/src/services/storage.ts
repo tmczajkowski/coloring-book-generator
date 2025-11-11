@@ -93,6 +93,7 @@ export const listHistory = async () => {
     // Only use meta.json; brak kompatybilności wstecznej
     const prompt = meta.prompt || '';
     const improvedPrompt = meta.improvedPrompt || '';
+    const references = Array.isArray(meta.references) ? meta.references : undefined;
     const hasJpg = fsSync.existsSync(imageJpg);
     const hasPng = fsSync.existsSync(imagePng);
     return {
@@ -100,6 +101,7 @@ export const listHistory = async () => {
       createdAt: meta.createdAt || 0,
       prompt,
       improvedPrompt: improvedPrompt || undefined,
+      references,
       imageUrl: hasJpg ? `/files/${id}/${FILE_IMAGE_JPG}` : (hasPng ? `/files/${id}/${FILE_IMAGE_PNG}` : undefined),
     };
   }));
