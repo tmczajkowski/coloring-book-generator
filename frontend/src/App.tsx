@@ -1374,6 +1374,14 @@ export const App: React.FC = () => {
                   </Box>
                 </Box>
               )}
+              {promptInfoItem.references && promptInfoItem.references.length > 0 && (
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>Referencje</Typography>
+                  <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                    {promptInfoItem.references.join(', ')}
+                  </Box>
+                </Box>
+              )}
             </Stack>
           )}
         </DialogContent>
