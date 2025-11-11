@@ -12,7 +12,7 @@ const ensureDir = async (dir: string) => {
 
 export const getSessionDir = (id: string) => {
   if (!isValidId(id)) {
-    throw new Error('Invalid session id');
+    throw new Error('Invalid session dir id: ' + id);
   }
   return path.join(config.dataDir, id);
 };
@@ -23,7 +23,7 @@ export const initStorage = async () => {
 
 export const createSession = async (id?: string) => {
   const candidate = id || String(Date.now());
-  if (!isValidId(candidate)) throw new Error('Invalid session id');
+  if (!isValidId(candidate)) throw new Error('Invalid session id: ' + candidate);
   const sessionId = candidate;
   const dir = getSessionDir(sessionId);
   await ensureDir(dir);
