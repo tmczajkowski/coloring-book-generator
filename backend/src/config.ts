@@ -11,8 +11,8 @@ try {
 
 export const config = {
   port: Number(process.env.PORT) || 3000,
-  dataDir: path.resolve('./data'),
-  referenceDir: path.resolve('./reference'),
+  dataDir: path.resolve('../data'),
+  referenceDir: path.resolve('../reference'),
   openaiApiKey: process.env.OPENAI_API_KEY || '',
   printerUri: process.env.PRINTER_URI || '',
   imageModel: process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1',
