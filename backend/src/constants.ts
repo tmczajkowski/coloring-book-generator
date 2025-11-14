@@ -14,7 +14,7 @@ export const IMAGE_A4_HEIGHT = 3508; // ~297mm @ 300 DPI
 export const OPENAI_IMAGE_SIZE = '1536x1024';
 
 // Prompts
-export const PROMPT_COLORING_BOOK = `Narysuj czarno-białą ilustrację do kolorowania (line art, wyraźne kontury, bez tła, brak szarości, brak cieniowania). Styl przyjazny dla dzieci. Nie dodawaj żadnego tekstu na obrazku, chyba ze jest to wprost powiedziane (to, że chce aby np. wygenerować Wiktora to nie znaczy, że chce napis Wiktor). Temat: `;
+export const PROMPT_COLORING_BOOK = `Narysuj czarno-białą ilustrację do kolorowania (bez tła, brak szarości, brak cieniowania). Nie dodawaj żadnego tekstu na obrazku, chyba ze jest to wprost powiedziane (to, że chce aby np. wygenerować Wiktora to nie znaczy, że chce napis Wiktor). Jeeli podałem jakieś referencje (inlineData) to niech one będą szczegółowe. Temat: `;
 export const PROMPT_IMPROVE = `Ulepsz ten prompt tak, aby powstała kolorowanka dla dzieci. Rozbuduj tylko  zawarotść kolorowanki, a nie to jak kolorowanka ma wygladać od storny technicznej, bo tym zajmuje sie coś innego. Zwroć tylko elementy na kolorowance. Oryginalny prompt: `;
 export const PROMPT_DETECT_REFERENCES = `Wyszukaj wszystkie pliki referencyjne i zwróć je w postaci json: { "references": ["plik1.jpg", "plik2.png"] } — tylko istniejące nazwy. Możesz zwrócić pustą listę. Pliki referencyjne mają w jakikolwiek sposób pasować do promta. np. jak jest plik Patryk - Tata.jpg i w jakikolwiek sposób wspomnę o tacie lub Patryku to masz zwrócić ten plik jeeli pasuje doo tego prompta.`;
 

@@ -55,6 +55,19 @@ const extractInlineImage = (result: GenerateContentResult): string | undefined =
   return undefined;
 };
 
+const summarizeParts = (parts: Part[] = []) => parts.map((part) => {
+  if (part.inlineData) {
+    return `inline(${part.inlineData?.mimeType || 'unknown'} len=${part.inlineData?.data?.length || 0})`;
+  }
+  if ((part as any).text) {
+    const txt = String((part as any).text);
+    return `text(${txt.slice(0, 60)}${txt.length > 60 ? '…' : ''})`;
+  }
+  if ((part as any).fileData) return 'fileData';
+  if ((part as any).functionCall) return 'functionCall';
+  return 'unknown';
+});
+
 const generateWithGemini = async (subject: string, references: string[] | undefined) => {
   const model = getModel();
   const prompt = buildPrompt(subject);
@@ -75,7 +88,7 @@ const generateWithGemini = async (subject: string, references: string[] | undefi
   });
 
   const generationConfig: Record<string, unknown> = {
-    responseModalities: ['IMAGE'],
+    responseModalities: ['Image'],
   };
   if (config.geminiAspectRatio) {
     generationConfig.imageConfig = { aspectRatio: config.geminiAspectRatio };
@@ -94,7 +107,22 @@ const generateWithGemini = async (subject: string, references: string[] | undefi
   const data = extractInlineImage(result);
   logger.info('Gemini: generate finished', { durationMs: Date.now() - start });
   if (!data) {
-    throw new Error('Brak danych obrazu z Gemini');
+    const candidatesSummary = (result.response?.candidates ?? []).map((candidate: any, idx: number) => ({
+      index: idx,
+      finishReason: candidate.finishReason,
+      partKinds: summarizeParts(candidate.content?.parts ?? []),
+    }));
+    logger.error('Gemini: missing inline image data', {
+      subject,
+      promptFeedback: result.response?.promptFeedback,
+      candidatesSummary,
+    });
+    const firstText = (result.response?.candidates ?? [])
+      .flatMap((c: any) => (c.content?.parts ?? []))
+      .map((part: any) => part?.text)
+      .find((txt) => typeof txt === 'string' && txt.trim().length > 0);
+    const hint = firstText ? ` Wskazówka od modelu: ${firstText.slice(0, 200)}` : '';
+    throw new Error('Brak danych obrazu z Gemini.' + hint);
   }
   return Buffer.from(data, 'base64');
 };

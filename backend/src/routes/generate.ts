@@ -37,21 +37,21 @@ generateRouter.post('/', async (req: Request, res: Response) => {
       }
     } catch {}
     try {
-      // Try reference-aware generation if references exist in meta
-      let pngBuffer: Buffer | null = null;
-      try {
-        const meta = await readMeta(id);
-        const refs: string[] = Array.isArray(meta?.references) ? meta.references : [];
-        if (refs.length > 0) {
-            pngBuffer = await generateImageWithReferences(prompt, refs);
+      const meta = await readMeta(id);
+      const refs: string[] = Array.isArray(meta?.references) ? meta.references : [];
+      let pngBuffer: Buffer;
+      if (refs.length > 0) {
+        try {
+          pngBuffer = await generateImageWithReferences(prompt, refs);
+        } catch (e: any) {
+          logger.error('Generation: reference mode failed', {
+            id,
+            references: refs,
+            error: e?.message || String(e),
+          });
+          throw e;
         }
-      } catch (e) {
-        // Do not treat as fatal for generation; proceed without references
-        logger.warn('Generation: reference generation failed, fallback to standard', { id, error: String((e as any)?.message || e) });
-      }
-      
-      // Fallback to standard generation if references failed or unavailable
-      if (!pngBuffer) {
+      } else {
         pngBuffer = await generateImage(prompt);
       }
       
