@@ -4,8 +4,13 @@ import OpenAI from 'openai';
 import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
 
+export const createOpenAIClient = () => new OpenAI({
+  apiKey: config.openaiApiKey,
+  timeout: config.openaiTimeoutMs,
+});
+
 function getClient() {
-  return new OpenAI({ apiKey: config.openaiApiKey, timeout: config.openaiTimeoutMs });
+  return createOpenAIClient();
 }
 
 export const transcribeAudio = async (audioPath: string): Promise<string> => {

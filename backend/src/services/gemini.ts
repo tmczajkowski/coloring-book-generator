@@ -21,6 +21,14 @@ const getModel = () => {
 
 const buildPrompt = (subject: string) => `${config.promptColoringBook} '${subject}'`;
 
+const buildContents = (prompt: string, referenceParts: Part[]) => [{
+  role: 'user',
+  parts: [
+    { text: prompt },
+    ...referenceParts,
+  ],
+}];
+
 const loadReferenceParts = async (fileNames: string[]): Promise<Part[]> => {
   const parts: Part[] = [];
   for (const name of fileNames) {
@@ -91,9 +99,7 @@ const generateWithGemini = async (subject: string, references: string[] | undefi
     aspectRatio: effectiveAspect || 'default',
   });
 
-  const generationConfig: Record<string, unknown> = {
-    responseModalities: ['Image'],
-  };
+  const generationConfig: Record<string, unknown> = {};
   if (effectiveAspect) {
     generationConfig.imageConfig = { aspectRatio: effectiveAspect };
   }
@@ -103,7 +109,7 @@ const generateWithGemini = async (subject: string, references: string[] | undefi
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const start = Date.now();
     const result = await model.generateContent({
-      contents: [{ role: 'user', parts }],
+      contents: buildContents(prompt, referenceParts),
       generationConfig: generationConfig as any,
     });
     lastResult = result;
@@ -133,6 +139,7 @@ const generateWithGemini = async (subject: string, references: string[] | undefi
         attempt,
         finishReasons,
         hasHint: Boolean(firstText),
+        result
       });
       continue;
     }

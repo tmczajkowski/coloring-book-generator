@@ -1,13 +1,27 @@
 import fs from 'fs/promises';
 import path from 'path';
-import OpenAI from 'openai';
+import { z } from 'zod';
+import { zodTextFormat } from 'openai/helpers/zod';
 import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
 import * as constants from '../constants.js';
+import { createOpenAIClient } from './openai.js';
+
+const referenceSchema = z.object({
+  references: z.array(z.string()),
+});
+type ReferenceSchemaType = z.infer<typeof referenceSchema>;
+
+const buildReferenceSystemMessage = () =>
+  'You are a reference selector. Respond only with a JSON object that strictly follows the provided schema ({ references: string[] }) and nothing else. Do not explain anything, do not add prose, and do not hallucinate values.';
+
+const buildReferenceUserMessage = (prompt: string, files: string[]) => {
+  const list = files.length ? files.join(', ') : 'brak';
+  const basePrompt = config.promptDetectReferences || constants.PROMPT_DETECT_REFERENCES;
+  return `${basePrompt}. Prompt: '${prompt}'. Files: ${list}.`;
+};
 
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
-
-const getClient = () => new OpenAI({ apiKey: config.openaiApiKey, timeout: config.openaiTimeoutMs });
 
 export type ReferenceDetectionResult = {
   references: string[]; // file names chosen by AI
@@ -35,36 +49,40 @@ export const detectReferences = async (userPrompt: string): Promise<ReferenceDet
   }
   if (available.length === 0) return { references: [], available };
 
-  const userMessage = config.promptDetectReferences + ". Prompt: '" + userPrompt + "'. Files: '" +  available.join('\n') + "'.";
-
-  const client = getClient();
+  const client = createOpenAIClient();
   logger.info('References: detect start', { count: available.length });
-  let content: string | undefined;
   try {
-    const resp = await client.chat.completions.create({
-      model: config.textModel || 'gpt-4o',
-      messages: [
-        { role: 'user', content: userMessage },
-      ],
+    const response = await client.responses.parse({
+      model: config.textModel,
       temperature: 0,
+      input: [
+        { role: 'system', content: buildReferenceSystemMessage() },
+        { role: 'user', content: buildReferenceUserMessage(userPrompt, available) },
+      ],
+      text: {
+        format: zodTextFormat(referenceSchema, 'reference_detection'),
+      },
     } as any);
-    content = (resp as any)?.choices?.[0]?.message?.content?.trim?.();
+
+    if (response.status === 'incomplete') {
+      logger.warn('References: incomplete response', { reason: response.incomplete_details?.reason });
+      throw new Error('Niekompletna odpowiedź od AI');
+    }
+
+    const parsed = response.output_parsed as ReferenceSchemaType | undefined;
+    logger.info('Parsed references', { references: parsed?.references });
+
+    if (!parsed) {
+      logger.warn('References: missing parsed JSON', { parsed, output: response.output_text });
+      throw new Error('Brak prawidłowego JSON-a od AI');
+    }
+
+    const refs = parsed.references.filter((name) => available.includes(name));
+    logger.info('References: detect result', { references: refs });
+    return { references: refs, available };
   } catch (e: any) {
     const msg = String(e?.message || e);
     logger.error('References: detection API error', { error: msg });
     throw new Error('Błąd wyszukiwania referencji');
   }
-  if (!content) throw new Error('Brak odpowiedzi z AI dla wyszukiwania referencji');
-  try {
-    logger.info('References: not parsed content', { content });
-    const parsed = JSON.parse(content);
-    let refs: string[] = Array.isArray(parsed?.references) ? parsed.references : [];
-    refs = refs.filter((n: string) => typeof n === 'string' && available.includes(n));
-    logger.info('References: detect result', { references: refs });
-    return { references: refs, available };
-  } catch (e) {
-    logger.error('References: invalid JSON from AI', { content });
-    throw new Error('Błąd parsowania odpowiedzi AI (referencje)');
-  }
 };
-
