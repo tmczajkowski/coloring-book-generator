@@ -11,8 +11,10 @@ try {
 
 export const config = {
   port: Number(process.env.PORT) || 3000,
-  dataDir: path.resolve('../data'),
-  referenceDir: path.resolve('../reference'),
+  dataDir: path.resolve(process.env.DATA_DIR || '../data'),
+  referenceDir: path.resolve(process.env.REFERENCE_DIR || '../reference'),
+  geminiApiKey: process.env.GEMINI_API_KEY || '',
+  geminiImageModel: process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image',
   openaiApiKey: process.env.OPENAI_API_KEY || '',
   printerUri: process.env.PRINTER_URI || '',
   imageModel: process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1',

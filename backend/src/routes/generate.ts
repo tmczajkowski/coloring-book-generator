@@ -1,19 +1,20 @@
 import { Router, type Request, type Response } from 'express';
 import { saveImageBuffer, createSession, getSessionDir, readMeta, updateMeta } from '../services/storage.js';
-import { generateImage, generateImageWithReferences, uploadReferenceFiles } from '../services/openai.js';
+import { generateImage, generateImageWithReferences } from '../services/gemini.js';
 import { logger } from '../utils/logger.js';
 import sharp from 'sharp';
 import { EXT_JPG, FILE_IMAGE_JPG } from '../constants.js';
 import fs from 'fs';
 import path from 'path';
 import { isValidId } from '../utils/validation.js';
+import { config } from '../config.js';
 
 export const generateRouter = Router();
 
 generateRouter.post('/', async (req: Request, res: Response) => {
   try {
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(503).json({ error: 'Brak konfiguracji OPENAI_API_KEY – generowanie zablokowane.' });
+    if (!config.geminiApiKey) {
+      return res.status(503).json({ error: 'Brak konfiguracji GEMINI_API_KEY – generowanie zablokowane.' });
     }
     const { id, prompt, forceHighQuality, quality } = req.body || {};
     if (!id || !prompt) return res.status(400).json({ error: 'Brak id lub promptu' });
@@ -43,10 +44,7 @@ generateRouter.post('/', async (req: Request, res: Response) => {
         const meta = await readMeta(id);
         const refs: string[] = Array.isArray(meta?.references) ? meta.references : [];
         if (refs.length > 0) {
-          const { fileIds } = await uploadReferenceFiles(refs);
-          if (fileIds.length > 0) {
-            pngBuffer = await generateImageWithReferences(prompt, fileIds, { qualityOverride });
-          }
+          pngBuffer = await generateImageWithReferences(prompt, refs, { qualityOverride });
         }
       } catch (e) {
         // Do not treat as fatal for generation; proceed without references
@@ -65,9 +63,10 @@ generateRouter.post('/', async (req: Request, res: Response) => {
       res.json({ imageUrl: `/files/${id}/${FILE_IMAGE_JPG}`, thumbUrl: `/files/${id}/${FILE_IMAGE_JPG}`, path: imgPath });
     } catch (e: any) {
       const msg = String(e?.message || e);
-      if (msg.includes('moderation_blocked') || msg.toLowerCase().includes('safety system')) {
+      const normalized = msg.toLowerCase();
+      if (msg.includes('moderation_blocked') || normalized.includes('safety system') || normalized.includes('system bezpieczeństwa')) {
         logger.warn('Generation: rejected by AI', { id, error: msg });
-        return res.status(400).send('Żądanie zostało zablokowane przez system bezpieczeństwa OpenAI. Zmień prompt i spróbuj ponownie.');
+        return res.status(400).send('Żądanie zostało zablokowane przez system bezpieczeństwa Gemini. Zmień prompt i spróbuj ponownie.');
       }
       throw e;
     }

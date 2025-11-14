@@ -6,13 +6,14 @@ export const configRouter = Router();
 configRouter.get('/', (_req: Request, res: Response) => {
   const expectedEnv = [
     'OPENAI_API_KEY',
+    'GEMINI_API_KEY',
     'PRINTER_URI'
   ];
   const missingEnv = expectedEnv.filter((k) => !process.env[k]);
-  const canGenerate = !!config.openaiApiKey; // blokujemy generowanie bez klucza
+  const canGenerate = !!config.geminiApiKey; // blokujemy generowanie bez klucza Gemini
   res.json({
     openaiTimeoutMs: config.openaiTimeoutMs,
-    imageModel: config.imageModel,
+    imageModel: config.geminiImageModel,
     imageReferencesModel: config.imageReferencesModel,
     openaiImageQuality: config.openaiImageQuality,
     textModel: config.textModel,
