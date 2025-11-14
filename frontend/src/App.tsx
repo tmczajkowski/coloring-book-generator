@@ -369,6 +369,7 @@ export const App: React.FC = () => {
     window.addEventListener('resize', recalc);
     return () => window.removeEventListener('resize', recalc);
   }, [isMobile]);
+  const ringClearance = Math.max(140, ring.radius + ring.item);
   // Whether to show the Transkrypcja step in the modal for this run
   const [includeTranscribeStep, setIncludeTranscribeStep] = useState<boolean>(false);
   // Persist child-friendly toggles (place after state declarations)
@@ -942,6 +943,8 @@ export const App: React.FC = () => {
                   boxShadow: 4,
                   width: 'auto',
                   maxWidth: '100%',
+                  position: 'relative',
+                  zIndex: 2,
                 }}
               >
                 <Tooltip title={landscapeMode ? 'Orientacja pozioma' : 'Orientacja pionowa'} arrow>
@@ -989,7 +992,7 @@ export const App: React.FC = () => {
                 const ringBoxSize = ring.radius * 2 + ring.item + 80;
                 const ringBoxSizePx = `${ringBoxSize}px`;
                 return (
-                  <Box sx={{ position: 'relative', width: ringBoxSizePx, height: ringBoxSizePx, maxWidth: '100%', maxHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Box sx={{ position: 'relative', width: ringBoxSizePx, height: ringBoxSizePx, maxWidth: '100%', maxHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center', mt: ringClearance }}>
                     <Fab
                       aria-label="Nagraj prompt głosowy"
                       color="error"

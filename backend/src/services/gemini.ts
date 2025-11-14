@@ -98,37 +98,56 @@ const generateWithGemini = async (subject: string, references: string[] | undefi
     generationConfig.imageConfig = { aspectRatio: effectiveAspect };
   }
 
-  const start = Date.now();
-  const result = await model.generateContent({
-    contents: [{ role: 'user', parts }],
-    generationConfig: generationConfig as any,
-  });
-  const blocked = result.response?.promptFeedback?.blockReason;
-  if (blocked && blocked !== 'BLOCKED_REASON_UNSPECIFIED') {
-    logger.warn('Gemini: request blocked', { subject, reason: blocked });
-    throw new Error('Żądanie zostało zablokowane przez system bezpieczeństwa Gemini. Zmień prompt i spróbuj ponownie.');
-  }
-  const data = extractInlineImage(result);
-  logger.info('Gemini: generate finished', { durationMs: Date.now() - start });
-  if (!data) {
+  const maxAttempts = references?.length ? 2 : 1;
+  let lastResult: GenerateContentResult | null = null;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const start = Date.now();
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts }],
+      generationConfig: generationConfig as any,
+    });
+    lastResult = result;
+    const blocked = result.response?.promptFeedback?.blockReason;
+    if (blocked && blocked !== 'BLOCKED_REASON_UNSPECIFIED') {
+      logger.warn('Gemini: request blocked', { subject, reason: blocked });
+      throw new Error('Żądanie zostało zablokowane przez system bezpieczeństwa Gemini. Zmień prompt i spróbuj ponownie.');
+    }
+    const data = extractInlineImage(result);
+    logger.info('Gemini: generate finished', { durationMs: Date.now() - start, attempt });
+    if (data) {
+      return Buffer.from(data, 'base64');
+    }
     const candidatesSummary = (result.response?.candidates ?? []).map((candidate: any, idx: number) => ({
       index: idx,
       finishReason: candidate.finishReason,
       partKinds: summarizeParts(candidate.content?.parts ?? []),
     }));
-    logger.error('Gemini: missing inline image data', {
-      subject,
-      promptFeedback: result.response?.promptFeedback,
-      candidatesSummary,
-    });
+    const finishReasons = candidatesSummary.map((c) => c.finishReason || 'unknown');
     const firstText = (result.response?.candidates ?? [])
       .flatMap((c: any) => (c.content?.parts ?? []))
       .map((part: any) => part?.text)
       .find((txt) => typeof txt === 'string' && txt.trim().length > 0);
-    const hint = firstText ? ` Wskazówka od modelu: ${firstText.slice(0, 200)}` : '';
-    throw new Error('Brak danych obrazu z Gemini.' + hint);
+    const shouldRetry = attempt + 1 < maxAttempts && finishReasons.every((fr) => fr !== 'IMAGE_BLOCKED');
+    if (shouldRetry) {
+      logger.warn('Gemini: missing inline data, retrying', {
+        attempt,
+        finishReasons,
+        hasHint: Boolean(firstText),
+      });
+      continue;
+    }
+    logger.error('Gemini: missing inline image data', {
+      subject,
+      promptFeedback: result.response?.promptFeedback,
+      candidatesSummary,
+      finishReasons,
+      hint: firstText?.slice(0, 200),
+    });
+    const hintText = firstText ? ` Wskazówka od modelu: ${firstText.slice(0, 200)}` : '';
+    const reasonText = finishReasons.length ? ` (powód: ${finishReasons.join(', ')})` : '';
+    throw new Error('Brak danych obrazu z Gemini' + reasonText + '.' + hintText);
   }
-  return Buffer.from(data, 'base64');
+  throw new Error('Brak danych obrazu z Gemini');
 };
 
 export const generateImage = async (subject: string, opts?: GeminiOptions) => {
