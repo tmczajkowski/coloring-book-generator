@@ -617,76 +617,33 @@ export const App: React.FC = () => {
               />
             </ButtonBase>
           </Typography>
-          {/* Unified icon-over-switch controls */}
-          {(() => {
-            // Both switches now share the same default style as the AI improve switch
-            return (
-              <>
-                <Tooltip title={landscapeMode ? 'Orientacja pozioma' : 'Orientacja pionowa'} arrow>
-                  <Box sx={{ ml: 1.5, pt: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    {landscapeMode ? (
-                      <CropLandscapeIcon fontSize="small" sx={{ color: 'common.white', mt: 1, mb: 0 }} />
-                    ) : (
-                      <CropPortraitIcon fontSize="small" sx={{ color: 'common.white', mt: 1, mb: 0 }} />
-                    )}
-                    <Switch
-                      checked={landscapeMode}
-                      onChange={(e) => setLandscapeMode(e.target.checked)}
-                      color={landscapeMode ? 'success' : 'default'}
-                      inputProps={{ 'aria-label': 'Orientacja pozioma' }}
-                    />
-                  </Box>
-                </Tooltip>
-                <Tooltip title={autoPrint ? 'Automatyczne drukowanie włączone' : 'Kolorowanki nie będą drukowane automatycznie'} arrow>
-                  <Box sx={{ ml: 1.5, pt: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <PrintIcon fontSize="small" sx={{ color: 'common.white', mt: 1, mb: 0 }} />
-                    <Switch
-                      checked={autoPrint}
-                      onChange={(e) => setAutoPrint(e.target.checked)}
-                      color={autoPrint ? 'success' : 'default'}
-                      inputProps={{ 'aria-label': 'Automatyczne drukowanie' }}
-                    />
-                  </Box>
-                </Tooltip>
-                <Tooltip title={improveEnabled ? 'Ulepszanie promptu włączone' : 'Wysyłaj oryginalny prompt'} arrow>
-                  <Box sx={{ ml: 1.5, pt: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <AutoAwesomeIcon fontSize="small" sx={{ color: 'common.white', mt: 1, mb: 0 }} />
-                    <Switch
-                      checked={improveEnabled}
-                      onChange={(e) => setImproveEnabled(e.target.checked)}
-                      color={improveEnabled ? 'success' : 'default'}
-                      inputProps={{ 'aria-label': 'Ulepszanie promptu' }}
-                    />
-                  </Box>
-                </Tooltip>
-                <Tooltip title={sfxEnabled ? 'Dźwięki włączone' : 'Dźwięki wyłączone'} arrow>
-                  <Box sx={{ ml: 1.5, pt: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    {sfxEnabled ? (
-                      <MusicNoteIcon fontSize="small" sx={{ color: 'common.white', mt: 1, mb: 0 }} />
-                    ) : (
-                      <VolumeOffIcon fontSize="small" sx={{ color: 'common.white', mt: 1, mb: 0 }} />
-                    )}
-                    <Switch
-                      checked={sfxEnabled}
-                      onChange={(e) => setSfxEnabled(e.target.checked)}
-                      color={sfxEnabled ? 'success' : 'default'}
-                      inputProps={{ 'aria-label': 'Dźwięki' }}
-                    />
-                  </Box>
-                </Tooltip>
-                <Tooltip title="Konfiguracja" arrow>
-                  <IconButton
-                    size="small"
-                    sx={{ ml: 1.5, color: 'common.white' }}
-                    onClick={async () => { await ensureConfigLoaded(); setConfigOpen(true); }}
-                    aria-label="Konfiguracja"
-                  >
-                    <InfoOutlinedIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </>
-            );
-          })()}
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Tooltip title={sfxEnabled ? 'Dźwięki włączone' : 'Dźwięki wyłączone'} arrow>
+              <Box sx={{ ml: 1.5, pt: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                {sfxEnabled ? (
+                  <MusicNoteIcon fontSize="small" sx={{ color: 'common.white', mt: 1, mb: 0 }} />
+                ) : (
+                  <VolumeOffIcon fontSize="small" sx={{ color: 'common.white', mt: 1, mb: 0 }} />
+                )}
+                <Switch
+                  checked={sfxEnabled}
+                  onChange={(e) => setSfxEnabled(e.target.checked)}
+                  color={sfxEnabled ? 'success' : 'default'}
+                  inputProps={{ 'aria-label': 'Dźwięki' }}
+                />
+              </Box>
+            </Tooltip>
+            <Tooltip title="Konfiguracja" arrow>
+              <IconButton
+                size="small"
+                sx={{ ml: 1.5, color: 'common.white' }}
+                onClick={async () => { await ensureConfigLoaded(); setConfigOpen(true); }}
+                aria-label="Konfiguracja"
+              >
+                <InfoOutlinedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Toolbar>
       </AppBar>
       <Box sx={{ display: 'flex', flex: 1, minHeight: 0, pt: { xs: 7, sm: 8 }, position: 'relative', zIndex: 1 }}>
@@ -971,31 +928,91 @@ export const App: React.FC = () => {
             </Box>
           ) : (
             <Stack spacing={2} alignItems="center">
-              <Box sx={{ position: 'relative', display: 'inline-grid' }}>
-                {/* Mic button */}
-                <Fab
-                aria-label="Nagraj prompt głosowy"
-                color="error"
-                size="large"
+              <Box
                 sx={{
-                  width: { xs: 96, sm: 168 },
-                  height: { xs: 96, sm: 168 },
-                  animation: status === 'recording' ? `${recordPulse} 1.4s ease-in-out infinite` : (canRecord ? `${pulse} 1.8s ease-in-out infinite` : 'none'),
-                  '&.Mui-disabled': {
-                    bgcolor: 'error.main',
-                    color: 'common.white',
-                    opacity: 1,
-                  },
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: { xs: 1, sm: 1.5 },
+                  bgcolor: (theme) => theme.palette.background.paper,
+                  borderRadius: 3,
+                  px: { xs: 1, sm: 1.5 },
+                  py: { xs: 0.75, sm: 1 },
+                  boxShadow: 4,
+                  width: 'auto',
+                  maxWidth: '100%',
                 }}
-                disabled={!canRecord}
-                onClick={canRecord ? startRecording : undefined}
               >
-                <MicIcon sx={{ fontSize: { xs: 36, sm: 56 } }} />
-                </Fab>
+                <Tooltip title={landscapeMode ? 'Orientacja pozioma' : 'Orientacja pionowa'} arrow>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    {landscapeMode ? (
+                      <CropLandscapeIcon color="primary" />
+                    ) : (
+                      <CropPortraitIcon color="action" />
+                    )}
+                    <Switch
+                      size="small"
+                      checked={landscapeMode}
+                      onChange={(e) => setLandscapeMode(e.target.checked)}
+                      color="primary"
+                      inputProps={{ 'aria-label': 'Orientacja pozioma' }}
+                    />
+                  </Box>
+                </Tooltip>
+                <Tooltip title={autoPrint ? 'Automatyczne drukowanie włączone' : 'Kolorowanki nie będą drukowane automatycznie'} arrow>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <PrintIcon color={autoPrint ? 'primary' : 'action'} />
+                    <Switch
+                      size="small"
+                      checked={autoPrint}
+                      onChange={(e) => setAutoPrint(e.target.checked)}
+                      color="primary"
+                      inputProps={{ 'aria-label': 'Automatyczne drukowanie' }}
+                    />
+                  </Box>
+                </Tooltip>
+                <Tooltip title={improveEnabled ? 'Ulepszanie promptu włączone' : 'Wysyłaj oryginalny prompt'} arrow>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <AutoAwesomeIcon color={improveEnabled ? 'primary' : 'action'} />
+                    <Switch
+                      size="small"
+                      checked={improveEnabled}
+                      onChange={(e) => setImproveEnabled(e.target.checked)}
+                      color="primary"
+                      inputProps={{ 'aria-label': 'Ulepszanie promptu' }}
+                    />
+                  </Box>
+                </Tooltip>
+              </Box>
+              {(() => {
+                const ringBoxSize = ring.radius * 2 + ring.item + 80;
+                const ringBoxSizePx = `${ringBoxSize}px`;
+                return (
+                  <Box sx={{ position: 'relative', width: ringBoxSizePx, height: ringBoxSizePx, maxWidth: '100%', maxHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Fab
+                      aria-label="Nagraj prompt głosowy"
+                      color="error"
+                      size="large"
+                      sx={{
+                        width: { xs: 96, sm: 168 },
+                        height: { xs: 96, sm: 168 },
+                        animation: status === 'recording' ? `${recordPulse} 1.4s ease-in-out infinite` : (canRecord ? `${pulse} 1.8s ease-in-out infinite` : 'none'),
+                        '&.Mui-disabled': {
+                          bgcolor: 'error.main',
+                          color: 'common.white',
+                          opacity: 1,
+                        },
+                      }}
+                      disabled={!canRecord}
+                      onClick={canRecord ? startRecording : undefined}
+                    >
+                      <MicIcon sx={{ fontSize: { xs: 36, sm: 56 } }} />
+                    </Fab>
 
-                {/* Idea icons around mic (emoji-only) */}
-                {ideasVisible && status === 'idle' && (() => {
-                  const catalog = [
+                    {/* Idea icons around mic (emoji-only) */}
+                    {ideasVisible && status === 'idle' && (() => {
+                      const catalog = [
                     { icon: '🌈', label: 'Tęcze', prompt: 'Tęcze z 7 paskami na kazdy kolor' },
                     { icon: '🦄', label: 'Jednorożce', prompt: 'Jednorożce w magicznym lesie' },
                     { icon: '🦁', label: 'Zwierzęta w zoo', prompt: 'Lew, żyrafa i słoń w zoo' },
@@ -1112,6 +1129,8 @@ export const App: React.FC = () => {
                   );
                 })()}
               </Box>
+            );
+          })()}
 
               {/* Visual hint only (no text) below the record button */}
               {status !== 'recording' && (
