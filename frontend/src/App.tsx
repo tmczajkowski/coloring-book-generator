@@ -605,9 +605,9 @@ export const App: React.FC = () => {
                 fontSize: 'inherit',
               }}
             >
-              {!isMobile && (
-                <Box component="span">Kolorowanki</Box>
-              )}
+              <Box component="span" sx={{ fontSize: { xs: '1.25rem', sm: 'inherit' } }}>
+                Kolorowanki
+              </Box>
               <BrushIcon
                 sx={{
                   fontSize: 22,
