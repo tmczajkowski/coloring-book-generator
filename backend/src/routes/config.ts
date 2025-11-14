@@ -14,8 +14,8 @@ configRouter.get('/', (_req: Request, res: Response) => {
   res.json({
     openaiTimeoutMs: config.openaiTimeoutMs,
     imageModel: config.geminiImageModel,
+    geminiAspectRatio: config.geminiAspectRatio,
     imageReferencesModel: config.imageReferencesModel,
-    openaiImageQuality: config.openaiImageQuality,
     textModel: config.textModel,
     sttModel: config.sttModel,
     printerUri: config.printerUri,

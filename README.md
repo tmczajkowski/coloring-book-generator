@@ -42,8 +42,8 @@ services:
       - GEMINI_API_KEY=... # Gemini key used for image generation
       - PRINTER_URI=ipp://<host-or-ip>/ipp/print # Your printer url
       - GEMINI_IMAGE_MODEL=gemini-2.5-flash-image
+      - GEMINI_IMAGE_ASPECT_RATIO=2:3
       - OPENAI_IMAGE_MODEL=gpt-image-1
-      - OPENAI_IMAGE_QUALITY=medium # Optional: quality passed to image API (e.g., low, medium, high, hd)
       - OPENAI_TEXT_MODEL=gpt-5-mini
       - OPENAI_STT_MODEL=whisper-1
       - OPENAI_TIMEOUT_MS=240000

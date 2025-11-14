@@ -5,8 +5,6 @@ import { GoogleGenerativeAI, type GenerateContentResult, type Part } from '@goog
 import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
 
-type GenerateOptions = { qualityOverride?: string };
-
 const ensureClient = () => {
   if (!config.geminiApiKey) {
     throw new Error('Brak konfiguracji GEMINI_API_KEY');
@@ -21,11 +19,7 @@ const getModel = () => {
   });
 };
 
-const buildPrompt = (subject: string, quality?: string) => {
-  const base = `${config.promptColoringBook} '${subject}'`;
-  if (!quality) return base;
-  return `${base}. Prefer ${quality} detail and crisp lines.`;
-};
+const buildPrompt = (subject: string) => `${config.promptColoringBook} '${subject}'`;
 
 const loadReferenceParts = async (fileNames: string[]): Promise<Part[]> => {
   const parts: Part[] = [];
@@ -61,9 +55,9 @@ const extractInlineImage = (result: GenerateContentResult): string | undefined =
   return undefined;
 };
 
-const generateWithGemini = async (subject: string, references: string[] | undefined, opts?: GenerateOptions) => {
+const generateWithGemini = async (subject: string, references: string[] | undefined) => {
   const model = getModel();
-  const prompt = buildPrompt(subject, opts?.qualityOverride);
+  const prompt = buildPrompt(subject);
   const referenceParts = references?.length ? await loadReferenceParts(references) : [];
   const parts: Part[] = [...referenceParts, { text: prompt }];
 
@@ -77,11 +71,20 @@ const generateWithGemini = async (subject: string, references: string[] | undefi
     referencesRequested: references?.length || 0,
     referencesAttached: referenceParts.length,
     model: config.geminiImageModel,
+    aspectRatio: config.geminiAspectRatio || 'default',
   });
+
+  const generationConfig: Record<string, unknown> = {
+    responseModalities: ['IMAGE'],
+  };
+  if (config.geminiAspectRatio) {
+    generationConfig.imageConfig = { aspectRatio: config.geminiAspectRatio };
+  }
 
   const start = Date.now();
   const result = await model.generateContent({
     contents: [{ role: 'user', parts }],
+    generationConfig: generationConfig as any,
   });
   const blocked = result.response?.promptFeedback?.blockReason;
   if (blocked && blocked !== 'BLOCKED_REASON_UNSPECIFIED') {
@@ -96,11 +99,11 @@ const generateWithGemini = async (subject: string, references: string[] | undefi
   return Buffer.from(data, 'base64');
 };
 
-export const generateImage = async (subject: string, opts?: GenerateOptions) => {
-  return generateWithGemini(subject, undefined, opts);
+export const generateImage = async (subject: string) => {
+  return generateWithGemini(subject, undefined);
 };
 
-export const generateImageWithReferences = async (subject: string, fileNames: string[], opts?: GenerateOptions) => {
+export const generateImageWithReferences = async (subject: string, fileNames: string[]) => {
   if (!fileNames.length) throw new Error('Brak referencji do Gemini');
-  return generateWithGemini(subject, fileNames, opts);
+  return generateWithGemini(subject, fileNames);
 };

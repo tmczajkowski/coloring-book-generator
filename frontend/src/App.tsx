@@ -36,7 +36,6 @@ import ButtonBase from '@mui/material/ButtonBase';
   import DeleteIcon from '@mui/icons-material/Delete';
   import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
   import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-  import HighQualityIcon from '@mui/icons-material/HighQuality';
   import { keyframes } from '@mui/system';
   import HistoryIcon from '@mui/icons-material/History';
   import { useTheme } from '@mui/material/styles';
@@ -96,11 +95,6 @@ export const App: React.FC = () => {
     } catch {}
     return true;
   });
-  // Force high quality override switch (only visible if default is not 'high')
-  const [forceHighQuality, setForceHighQuality] = useState<boolean>(() => {
-    try { const saved = localStorage.getItem('forceHighQuality'); if (saved != null) return saved === 'true'; } catch {}
-    return false;
-  });
   const goHome = () => { window.location.href = '/'; };
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -136,13 +130,11 @@ export const App: React.FC = () => {
     const sp = new URLSearchParams(window.location.search);
     sp.set('auto-print', String(autoPrint));
     sp.set('improve', String(improveEnabled));
-    sp.set('hq', String(forceHighQuality));
     const url = `${window.location.pathname}?${sp.toString()}`;
     window.history.replaceState({}, '', url);
     try { localStorage.setItem('autoPrint', String(autoPrint)); } catch {}
     try { localStorage.setItem('improveEnabled', String(improveEnabled)); } catch {}
-    try { localStorage.setItem('forceHighQuality', String(forceHighQuality)); } catch {}
-  }, [autoPrint, improveEnabled, forceHighQuality]);
+  }, [autoPrint, improveEnabled]);
 
   // Close preview with ESC key
   useEffect(() => {
@@ -227,7 +219,7 @@ export const App: React.FC = () => {
             throw e;
           }
           setStatus('generating');
-          const gen = await api.generate(id, finalPrompt, { forceHighQuality });
+          const gen = await api.generate(id, finalPrompt);
           setImageUrl(gen.imageUrl);
           if (autoPrint) {
             setStatus('printing');
@@ -468,7 +460,7 @@ export const App: React.FC = () => {
         throw e;
       }
       setStatus('generating');
-      const gen = await api.generate(newId, finalPrompt, { forceHighQuality });
+      const gen = await api.generate(newId, finalPrompt);
       setImageUrl(gen.imageUrl);
       if (autoPrint) {
         setStatus('printing');
@@ -614,19 +606,6 @@ export const App: React.FC = () => {
             // Both switches now share the same default style as the AI improve switch
             return (
               <>
-                {runtimeConfig?.openaiImageQuality?.toLowerCase?.() !== 'high' && (
-                  <Tooltip title={forceHighQuality ? 'Wysoka jakość wymuszona' : 'Domyślna jakość z konfiguracji'} arrow>
-                    <Box sx={{ ml: 2, pt: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <HighQualityIcon fontSize="small" sx={{ color: 'common.white', mt: 1, mb: 0 }} />
-                      <Switch
-                        checked={forceHighQuality}
-                        onChange={(e) => setForceHighQuality(e.target.checked)}
-                        color={forceHighQuality ? 'success' : 'default'}
-                        inputProps={{ 'aria-label': 'Wysoka jakość' }}
-                      />
-                    </Box>
-                  </Tooltip>
-                )}
                 <Tooltip title={autoPrint ? 'Automatyczne drukowanie włączone' : 'Kolorowanki nie będą drukowane automatycznie'} arrow>
                   <Box sx={{ ml: 1.5, pt: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <PrintIcon fontSize="small" sx={{ color: 'common.white', mt: 1, mb: 0 }} />
@@ -807,7 +786,7 @@ export const App: React.FC = () => {
                             setStatus('generating');
                             setPrompt(selected.prompt);
                             const newId = String(Date.now());
-                            const gen = await api.generate(newId, selected.prompt, { forceHighQuality });
+                            const gen = await api.generate(newId, selected.prompt);
                             setImageUrl(gen.imageUrl);
                             await refreshHistory();
                             const updated = (await api.history()).find(i => i.id === newId);
@@ -891,7 +870,7 @@ export const App: React.FC = () => {
                             setStatus('generating');
                             setPrompt(selected.prompt);
                             const newId = String(Date.now());
-                            const gen = await api.generate(newId, selected.prompt, { forceHighQuality });
+                            const gen = await api.generate(newId, selected.prompt);
                             setImageUrl(gen.imageUrl);
                             await refreshHistory();
                             const updated = (await api.history()).find(i => i.id === newId);
@@ -1254,12 +1233,6 @@ export const App: React.FC = () => {
               <Typography variant="subtitle2">OPENAI_IMAGE_REFERENCES_MODEL</Typography>
               <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace' }}>
                 {runtimeConfig?.imageReferencesModel || '—'}
-              </Box>
-            </Box>
-            <Box>
-              <Typography variant="subtitle2">OPENAI_IMAGE_QUALITY</Typography>
-              <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace' }}>
-                {runtimeConfig?.openaiImageQuality || '—'}
               </Box>
             </Box>
             <Box>

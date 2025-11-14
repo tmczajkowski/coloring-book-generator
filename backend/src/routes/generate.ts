@@ -3,7 +3,7 @@ import { saveImageBuffer, createSession, getSessionDir, readMeta, updateMeta } f
 import { generateImage, generateImageWithReferences } from '../services/gemini.js';
 import { logger } from '../utils/logger.js';
 import sharp from 'sharp';
-import { EXT_JPG, FILE_IMAGE_JPG } from '../constants.js';
+import { EXT_JPG, FILE_IMAGE_JPG, IMAGE_A4_HEIGHT, IMAGE_A4_WIDTH } from '../constants.js';
 import fs from 'fs';
 import path from 'path';
 import { isValidId } from '../utils/validation.js';
@@ -16,11 +16,10 @@ generateRouter.post('/', async (req: Request, res: Response) => {
     if (!config.geminiApiKey) {
       return res.status(503).json({ error: 'Brak konfiguracji GEMINI_API_KEY – generowanie zablokowane.' });
     }
-    const { id, prompt, forceHighQuality, quality } = req.body || {};
+    const { id, prompt } = req.body || {};
     if (!id || !prompt) return res.status(400).json({ error: 'Brak id lub promptu' });
     if (!isValidId(id)) return res.status(400).json({ error: 'Nieprawidłowe id' });
-    const qualityOverride: string | undefined = (typeof quality === 'string' && quality.trim()) ? String(quality).trim() : (forceHighQuality ? 'high' : undefined);
-    logger.info('Generation: start', { id, prompt, qualityOverride: qualityOverride || 'default' });
+    logger.info('Generation: start', { id, prompt });
     const dir = getSessionDir(id);
     const metaPath = path.join(dir, 'meta.json');
     if (!fs.existsSync(metaPath)) {
@@ -44,7 +43,7 @@ generateRouter.post('/', async (req: Request, res: Response) => {
         const meta = await readMeta(id);
         const refs: string[] = Array.isArray(meta?.references) ? meta.references : [];
         if (refs.length > 0) {
-          pngBuffer = await generateImageWithReferences(prompt, refs, { qualityOverride });
+            pngBuffer = await generateImageWithReferences(prompt, refs);
         }
       } catch (e) {
         // Do not treat as fatal for generation; proceed without references
@@ -53,11 +52,15 @@ generateRouter.post('/', async (req: Request, res: Response) => {
       
       // Fallback to standard generation if references failed or unavailable
       if (!pngBuffer) {
-        pngBuffer = await generateImage(prompt, { qualityOverride });
+        pngBuffer = await generateImage(prompt);
       }
       
       const source = pngBuffer;
-      const jpg = await sharp(source).flatten({ background: { r: 255, g: 255, b: 255 } }).jpeg({ quality: 95 }).toBuffer();
+      const jpg = await sharp(source)
+        .resize(IMAGE_A4_WIDTH, IMAGE_A4_HEIGHT, { fit: 'contain', background: { r: 255, g: 255, b: 255 } })
+        .flatten({ background: { r: 255, g: 255, b: 255 } })
+        .jpeg({ quality: 95 })
+        .toBuffer();
       const imgPath = await saveImageBuffer(id, jpg, EXT_JPG);
       logger.info('Generation: image saved', { id, path: imgPath });
       res.json({ imageUrl: `/files/${id}/${FILE_IMAGE_JPG}`, thumbUrl: `/files/${id}/${FILE_IMAGE_JPG}`, path: imgPath });
