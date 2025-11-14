@@ -41,7 +41,9 @@ import ButtonBase from '@mui/material/ButtonBase';
   import { useTheme } from '@mui/material/styles';
   import useMediaQuery from '@mui/material/useMediaQuery';
   import BrushIcon from '@mui/icons-material/Brush';
-  import CelebrationIcon from '@mui/icons-material/Celebration';
+import CelebrationIcon from '@mui/icons-material/Celebration';
+import CropPortraitIcon from '@mui/icons-material/CropPortrait';
+import CropLandscapeIcon from '@mui/icons-material/CropLandscape';
 import { AnimatedBackground } from './components/AnimatedBackground';
 import { Confetti } from './components/Confetti';
 import { Mascot } from './components/Mascot';
@@ -100,6 +102,13 @@ export const App: React.FC = () => {
     } catch {}
     return true;
   });
+  const [landscapeMode, setLandscapeMode] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('landscapeMode');
+      if (saved != null) return saved === 'true';
+    } catch {}
+    return false;
+  });
   const goHome = () => { window.location.href = '/'; };
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -135,11 +144,13 @@ export const App: React.FC = () => {
     const sp = new URLSearchParams(window.location.search);
     sp.set('auto-print', String(autoPrint));
     sp.set('improve', String(improveEnabled));
+    sp.set('landscape', String(landscapeMode));
     const url = `${window.location.pathname}?${sp.toString()}`;
     window.history.replaceState({}, '', url);
     try { localStorage.setItem('autoPrint', String(autoPrint)); } catch {}
     try { localStorage.setItem('improveEnabled', String(improveEnabled)); } catch {}
-  }, [autoPrint, improveEnabled]);
+    try { localStorage.setItem('landscapeMode', String(landscapeMode)); } catch {}
+  }, [autoPrint, improveEnabled, landscapeMode]);
 
   // Close preview with ESC key
   useEffect(() => {
@@ -224,7 +235,7 @@ export const App: React.FC = () => {
             throw e;
           }
           setStatus('generating');
-          const gen = await api.generate(id, finalPrompt);
+          const gen = await api.generate(id, finalPrompt, { landscape: landscapeMode });
           setImageUrl(gen.imageUrl);
           if (autoPrint) {
             setStatus('printing');
@@ -465,7 +476,7 @@ export const App: React.FC = () => {
         throw e;
       }
       setStatus('generating');
-      const gen = await api.generate(newId, finalPrompt);
+      const gen = await api.generate(newId, finalPrompt, { landscape: landscapeMode });
       setImageUrl(gen.imageUrl);
       if (autoPrint) {
         setStatus('printing');
@@ -611,6 +622,21 @@ export const App: React.FC = () => {
             // Both switches now share the same default style as the AI improve switch
             return (
               <>
+                <Tooltip title={landscapeMode ? 'Orientacja pozioma' : 'Orientacja pionowa'} arrow>
+                  <Box sx={{ ml: 1.5, pt: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    {landscapeMode ? (
+                      <CropLandscapeIcon fontSize="small" sx={{ color: 'common.white', mt: 1, mb: 0 }} />
+                    ) : (
+                      <CropPortraitIcon fontSize="small" sx={{ color: 'common.white', mt: 1, mb: 0 }} />
+                    )}
+                    <Switch
+                      checked={landscapeMode}
+                      onChange={(e) => setLandscapeMode(e.target.checked)}
+                      color={landscapeMode ? 'success' : 'default'}
+                      inputProps={{ 'aria-label': 'Orientacja pozioma' }}
+                    />
+                  </Box>
+                </Tooltip>
                 <Tooltip title={autoPrint ? 'Automatyczne drukowanie włączone' : 'Kolorowanki nie będą drukowane automatycznie'} arrow>
                   <Box sx={{ ml: 1.5, pt: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <PrintIcon fontSize="small" sx={{ color: 'common.white', mt: 1, mb: 0 }} />
@@ -791,7 +817,7 @@ export const App: React.FC = () => {
                             setStatus('generating');
                             setPrompt(selected.prompt);
                             const newId = String(Date.now());
-                            const gen = await api.generate(newId, selected.prompt);
+                            const gen = await api.generate(newId, selected.prompt, { landscape: landscapeMode });
                             setImageUrl(gen.imageUrl);
                             await refreshHistory();
                             const updated = (await api.history()).find(i => i.id === newId);
@@ -875,7 +901,7 @@ export const App: React.FC = () => {
                             setStatus('generating');
                             setPrompt(selected.prompt);
                             const newId = String(Date.now());
-                            const gen = await api.generate(newId, selected.prompt);
+                            const gen = await api.generate(newId, selected.prompt, { landscape: landscapeMode });
                             setImageUrl(gen.imageUrl);
                             await refreshHistory();
                             const updated = (await api.history()).find(i => i.id === newId);

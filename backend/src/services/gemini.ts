@@ -68,7 +68,9 @@ const summarizeParts = (parts: Part[] = []) => parts.map((part) => {
   return 'unknown';
 });
 
-const generateWithGemini = async (subject: string, references: string[] | undefined) => {
+type GeminiOptions = { aspectRatio?: string };
+
+const generateWithGemini = async (subject: string, references: string[] | undefined, opts?: GeminiOptions) => {
   const model = getModel();
   const prompt = buildPrompt(subject);
   const referenceParts = references?.length ? await loadReferenceParts(references) : [];
@@ -78,20 +80,22 @@ const generateWithGemini = async (subject: string, references: string[] | undefi
     throw new Error('Brak dostępnych referencji do przesłania do Gemini');
   }
 
+  const effectiveAspect = opts?.aspectRatio || config.geminiAspectRatio;
+
   logger.info('Gemini: generate call', {
     subject,
     prompt,
     referencesRequested: references?.length || 0,
     referencesAttached: referenceParts.length,
     model: config.geminiImageModel,
-    aspectRatio: config.geminiAspectRatio || 'default',
+    aspectRatio: effectiveAspect || 'default',
   });
 
   const generationConfig: Record<string, unknown> = {
     responseModalities: ['Image'],
   };
-  if (config.geminiAspectRatio) {
-    generationConfig.imageConfig = { aspectRatio: config.geminiAspectRatio };
+  if (effectiveAspect) {
+    generationConfig.imageConfig = { aspectRatio: effectiveAspect };
   }
 
   const start = Date.now();
@@ -127,11 +131,11 @@ const generateWithGemini = async (subject: string, references: string[] | undefi
   return Buffer.from(data, 'base64');
 };
 
-export const generateImage = async (subject: string) => {
-  return generateWithGemini(subject, undefined);
+export const generateImage = async (subject: string, opts?: GeminiOptions) => {
+  return generateWithGemini(subject, undefined, opts);
 };
 
-export const generateImageWithReferences = async (subject: string, fileNames: string[]) => {
+export const generateImageWithReferences = async (subject: string, fileNames: string[], opts?: GeminiOptions) => {
   if (!fileNames.length) throw new Error('Brak referencji do Gemini');
-  return generateWithGemini(subject, fileNames);
+  return generateWithGemini(subject, fileNames, opts);
 };

@@ -10,15 +10,24 @@ import { config } from '../config.js';
 
 export const generateRouter = Router();
 
+const flipAspectRatio = (ratio: string | undefined, landscape: boolean | undefined): string | undefined => {
+  if (!ratio || !landscape) return ratio;
+  const parts = ratio.split(':').map((p) => p.trim()).filter(Boolean);
+  if (parts.length !== 2) return ratio;
+  return `${parts[1]}:${parts[0]}`;
+};
+
 generateRouter.post('/', async (req: Request, res: Response) => {
   try {
     if (!config.geminiApiKey) {
       return res.status(503).json({ error: 'Brak konfiguracji GEMINI_API_KEY – generowanie zablokowane.' });
     }
-    const { id, prompt } = req.body || {};
+    const { id, prompt, landscape } = req.body || {};
     if (!id || !prompt) return res.status(400).json({ error: 'Brak id lub promptu' });
     if (!isValidId(id)) return res.status(400).json({ error: 'Nieprawidłowe id' });
-    logger.info('Generation: start', { id, prompt });
+    const isLandscape = Boolean(landscape);
+    logger.info('Generation: start', { id, prompt, landscape: isLandscape });
+    const aspectRatio = flipAspectRatio(config.geminiAspectRatio, isLandscape);
     const dir = getSessionDir(id);
     const metaPath = path.join(dir, 'meta.json');
     if (!fs.existsSync(metaPath)) {
@@ -41,7 +50,7 @@ generateRouter.post('/', async (req: Request, res: Response) => {
       let pngBuffer: Buffer;
       if (refs.length > 0) {
         try {
-          pngBuffer = await generateImageWithReferences(prompt, refs);
+          pngBuffer = await generateImageWithReferences(prompt, refs, { aspectRatio });
         } catch (e: any) {
           logger.error('Generation: reference mode failed', {
             id,
@@ -51,7 +60,7 @@ generateRouter.post('/', async (req: Request, res: Response) => {
           throw e;
         }
       } else {
-        pngBuffer = await generateImage(prompt);
+        pngBuffer = await generateImage(prompt, { aspectRatio });
       }
       
       const imgPath = await saveImageBuffer(id, pngBuffer, EXT_PNG);
