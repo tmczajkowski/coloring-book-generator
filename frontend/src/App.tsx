@@ -572,11 +572,11 @@ export const App: React.FC = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex', height: '100dvh', position: 'relative' }}>
+    <Box sx={{ display: 'flex', height: '100dvh', position: 'relative', width: '100%', overflowX: 'hidden' }}>
       <AnimatedBackground />
       <Confetti triggerKey={confettiKey} />
       <AppBar position="fixed" color="primary" elevation={1}>
-        <Toolbar>
+        <Toolbar sx={{ px: { xs: 1, sm: 2 } }}>
           {isMobile && (
             <Tooltip title="Historia" arrow>
               <IconButton edge="start" color="inherit" onClick={() => setHistoryOpen(true)} aria-label="Historia" sx={{ mr: 1 }}>
@@ -587,7 +587,14 @@ export const App: React.FC = () => {
           <Typography
             variant="h6"
             component="div"
-            sx={{ flexGrow: 1, lineHeight: { xs: 1.15, sm: 1.2 }, display: 'flex', alignItems: 'center' }}
+            sx={{
+              flexGrow: 1,
+              minWidth: 0,
+              lineHeight: { xs: 1.15, sm: 1.2 },
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: { xs: 'center', sm: 'flex-start' },
+            }}
           >
             <ButtonBase
               onClick={goHome}
@@ -601,11 +608,22 @@ export const App: React.FC = () => {
                 py: 0.25,
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: { xs: 'center', sm: 'flex-start' },
                 gap: { xs: 0.5, sm: 1 },
                 fontSize: 'inherit',
+                minWidth: 0,
+                width: '100%',
               }}
             >
-              <Box component="span" sx={{ fontSize: { xs: '1.25rem', sm: 'inherit' } }}>
+              <Box
+                component="span"
+                sx={{
+                  fontSize: { xs: '1.25rem', sm: 'inherit' },
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
                 Kolorowanki
               </Box>
               <BrushIcon
@@ -620,7 +638,7 @@ export const App: React.FC = () => {
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Tooltip title={sfxEnabled ? 'Dźwięki włączone' : 'Dźwięki wyłączone'} arrow>
-              <Box sx={{ ml: 1.5, pt: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <Box sx={{ ml: { xs: 0.75, sm: 1.5 }, pt: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 {sfxEnabled ? (
                   <MusicNoteIcon fontSize="small" sx={{ color: 'common.white', mt: 1, mb: 0 }} />
                 ) : (
@@ -637,7 +655,7 @@ export const App: React.FC = () => {
             <Tooltip title="Konfiguracja" arrow>
               <IconButton
                 size="small"
-                sx={{ ml: 1.5, color: 'common.white' }}
+                sx={{ ml: { xs: 0.75, sm: 1.5 }, color: 'common.white' }}
                 onClick={async () => { await ensureConfigLoaded(); setConfigOpen(true); }}
                 aria-label="Konfiguracja"
               >
@@ -725,7 +743,21 @@ export const App: React.FC = () => {
         </Box>
         )}
 
-        <Box component="main" sx={{ flex: 1, position: 'relative', p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Box
+          component="main"
+          sx={{
+            flex: 1,
+            position: 'relative',
+            p: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: { xs: '100%', sm: 'auto' },
+            maxWidth: { xs: '100%', sm: 'none' },
+            mx: { xs: 'auto', sm: 0 },
+            px: { xs: 1, sm: 2 },
+          }}
+        >
           {(selected && status !== 'recording') ? (
             <Box sx={{ display: 'flex', width: '100%', height: '100%', gap: 2 }}>
               {/* Image area on the left (bigger) */}
@@ -928,7 +960,7 @@ export const App: React.FC = () => {
               )}
             </Box>
           ) : (
-            <Stack spacing={2} alignItems="center">
+            <Stack spacing={2} alignItems="center" sx={{ width: '100%', maxWidth: { xs: 420, sm: 640 }, mx: 'auto' }}>
               <Box
                 sx={{
                   display: 'flex',
@@ -974,11 +1006,11 @@ export const App: React.FC = () => {
                       inputProps={{ 'aria-label': 'Automatyczne drukowanie' }}
                     />
                   </Box>
-                </Tooltip>
-                <Tooltip title={improveEnabled ? 'Ulepszanie promptu włączone' : 'Wysyłaj oryginalny prompt'} arrow>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <AutoAwesomeIcon color={improveEnabled ? 'primary' : 'action'} />
-                    <Switch
+              </Tooltip>
+              <Tooltip title={improveEnabled ? 'Ulepszanie promptu włączone' : 'Wysyłaj oryginalny prompt'} arrow>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <AutoAwesomeIcon color={improveEnabled ? 'primary' : 'action'} />
+                  <Switch
                       size="small"
                       checked={improveEnabled}
                       onChange={(e) => setImproveEnabled(e.target.checked)}
@@ -989,7 +1021,8 @@ export const App: React.FC = () => {
                 </Tooltip>
               </Box>
               {(() => {
-                const ringBoxSize = ring.radius * 2 + ring.item + 80;
+                const ringPadding = isMobile ? 0 : 80;
+                const ringBoxSize = ring.radius * 2 + ring.item + ringPadding;
                 const ringBoxSizePx = `${ringBoxSize}px`;
                 return (
                   <Box sx={{ position: 'relative', width: ringBoxSizePx, height: ringBoxSizePx, maxWidth: '100%', maxHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center', mt: ringClearance }}>
