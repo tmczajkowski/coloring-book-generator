@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api, HistoryItem, type RuntimeConfig } from './api/client';
 import { auth, onAuthRequired } from './api/auth';
-  import {
+import {
     AppBar,
     Toolbar,
     Typography,
@@ -28,6 +28,7 @@ import { auth, onAuthRequired } from './api/auth';
   StepLabel,
       Alert,
   } from '@mui/material';
+import ButtonBase from '@mui/material/ButtonBase';
   import MicIcon from '@mui/icons-material/Mic';
   import PrintIcon from '@mui/icons-material/Print';
   import CloseIcon from '@mui/icons-material/Close';
@@ -100,6 +101,7 @@ export const App: React.FC = () => {
     try { const saved = localStorage.getItem('forceHighQuality'); if (saved != null) return saved === 'true'; } catch {}
     return false;
   });
+  const goHome = () => { window.location.href = '/'; };
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const cancelledRef = useRef<boolean>(false);
@@ -576,10 +578,36 @@ export const App: React.FC = () => {
           <Typography
             variant="h6"
             component="div"
-            sx={{ flexGrow: 1, lineHeight: { xs: 1.15, sm: 1.2 }, display: 'flex', alignItems: 'center', gap: 1 }}
+            sx={{ flexGrow: 1, lineHeight: { xs: 1.15, sm: 1.2 }, display: 'flex', alignItems: 'center' }}
           >
-            <Box component="span" sx={{ color: 'common.white', fontWeight: 800, textShadow: '0 1px 2px rgba(0,0,0,0.25)' }}>Kolorowanki</Box>
-            <BrushIcon sx={{ fontSize: 22, animation: `${wiggle} 2.4s ease-in-out infinite`, transformOrigin: 'bottom center' }} />
+            <ButtonBase
+              onClick={goHome}
+              aria-label="Przejdź do strony głównej"
+              sx={{
+                color: 'common.white',
+                fontWeight: 800,
+                textShadow: '0 1px 2px rgba(0,0,0,0.25)',
+                borderRadius: 1,
+                px: 0.5,
+                py: 0.25,
+                display: 'flex',
+                alignItems: 'center',
+                gap: { xs: 0.5, sm: 1 },
+                fontSize: 'inherit',
+              }}
+            >
+              {!isMobile && (
+                <Box component="span">Kolorowanki</Box>
+              )}
+              <BrushIcon
+                sx={{
+                  fontSize: 22,
+                  animation: `${wiggle} 2.4s ease-in-out infinite`,
+                  transformOrigin: 'bottom center',
+                  color: 'inherit',
+                }}
+              />
+            </ButtonBase>
           </Typography>
           {/* Unified icon-over-switch controls */}
           {(() => {
