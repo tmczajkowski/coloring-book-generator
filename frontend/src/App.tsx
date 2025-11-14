@@ -42,11 +42,16 @@ import ButtonBase from '@mui/material/ButtonBase';
   import useMediaQuery from '@mui/material/useMediaQuery';
   import BrushIcon from '@mui/icons-material/Brush';
   import CelebrationIcon from '@mui/icons-material/Celebration';
-  import { AnimatedBackground } from './components/AnimatedBackground';
-  import { Confetti } from './components/Confetti';
-  import { Mascot } from './components/Mascot';
-  import MusicNoteIcon from '@mui/icons-material/MusicNote';
-  import VolumeOffIcon from '@mui/icons-material/VolumeOff';
+import { AnimatedBackground } from './components/AnimatedBackground';
+import { Confetti } from './components/Confetti';
+import { Mascot } from './components/Mascot';
+import MusicNoteIcon from '@mui/icons-material/MusicNote';
+import VolumeOffIcon from '@mui/icons-material/VolumeOff';
+
+const stripExtension = (name: string) => {
+  const idx = name.lastIndexOf('.');
+  return idx > 0 ? name.slice(0, idx) : name;
+};
 
 type Status = 'idle' | 'recording' | 'transcribing' | 'improving' | 'referencing' | 'generating' | 'printing' | 'done' | 'error';
 
@@ -1150,7 +1155,7 @@ export const App: React.FC = () => {
                 <Box sx={{ mt: 1.5 }}>
                   <Typography variant="subtitle2" gutterBottom>Wybrane referencje</Typography>
                   <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-                    {foundReferences.length > 0 ? foundReferences.join(', ') : '— (brak)'}
+                    {foundReferences.length > 0 ? foundReferences.map(stripExtension).join(', ') : '— (brak)'}
                   </Box>
                 </Box>
               )}
@@ -1384,7 +1389,7 @@ export const App: React.FC = () => {
                 <Box>
                   <Typography variant="subtitle2" gutterBottom>Referencje</Typography>
                   <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                    {promptInfoItem.references.join(', ')}
+                    {promptInfoItem.references.map(stripExtension).join(', ')}
                   </Box>
                 </Box>
               )}
