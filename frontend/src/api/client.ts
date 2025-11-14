@@ -31,7 +31,6 @@ export type RuntimeConfig = {
   openaiTimeoutMs: number;
   imageModel?: string;
   imageReferencesModel?: string;
-  openaiImageQuality?: string;
   textModel?: string;
   sttModel?: string;
   printerUri?: string;
@@ -95,10 +94,8 @@ export const api = {
       return res.json();
     }, OPENAI_TIMEOUT);
   },
-  async generate(id: string, prompt: string, options?: { forceHighQuality?: boolean; quality?: string }): Promise<{ imageUrl: string; thumbUrl: string }>{
+  async generate(id: string, prompt: string): Promise<{ imageUrl: string; thumbUrl: string }>{
     const body: any = { id, prompt };
-    if (options?.quality) body.quality = options.quality;
-    else if (options?.forceHighQuality) body.forceHighQuality = true;
     return postJson('/api/generate', body, OPENAI_TIMEOUT);
   },
   async improve(id: string, prompt: string): Promise<{ id: string; improved: string }>{
