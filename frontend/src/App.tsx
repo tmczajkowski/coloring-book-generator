@@ -650,14 +650,19 @@ export const App: React.FC = () => {
                   </Box>
                 </Tooltip>
                 <Tooltip title={sfxEnabled ? 'Dźwięki włączone' : 'Dźwięki wyłączone'} arrow>
-                  <IconButton
-                    size="small"
-                    sx={{ ml: 1.5, color: 'common.white' }}
-                    onClick={() => setSfxEnabled(v => !v)}
-                    aria-label="Dźwięki"
-                  >
-                    {sfxEnabled ? <MusicNoteIcon fontSize="small" /> : <VolumeOffIcon fontSize="small" />}
-                  </IconButton>
+                  <Box sx={{ ml: 1.5, pt: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    {sfxEnabled ? (
+                      <MusicNoteIcon fontSize="small" sx={{ color: 'common.white', mt: 1, mb: 0 }} />
+                    ) : (
+                      <VolumeOffIcon fontSize="small" sx={{ color: 'common.white', mt: 1, mb: 0 }} />
+                    )}
+                    <Switch
+                      checked={sfxEnabled}
+                      onChange={(e) => setSfxEnabled(e.target.checked)}
+                      color={sfxEnabled ? 'success' : 'default'}
+                      inputProps={{ 'aria-label': 'Dźwięki' }}
+                    />
+                  </Box>
                 </Tooltip>
                 <Tooltip title="Konfiguracja" arrow>
                   <IconButton
