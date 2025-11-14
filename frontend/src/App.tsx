@@ -1,61 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Box } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { api, HistoryItem, type RuntimeConfig } from './api/client';
 import { auth, onAuthRequired } from './api/auth';
-import {
-    AppBar,
-    Toolbar,
-    Typography,
-    Box,
-    Link,
-    List,
-    ListItem,
-    ListItemText,
-    Divider,
-    Stack,
-    Button,
-    Fab,
-    Switch,
-    FormControlLabel,
-    Tooltip,
-    IconButton,
-    TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Stepper,
-  Step,
-  StepLabel,
-      Alert,
-  } from '@mui/material';
-import ButtonBase from '@mui/material/ButtonBase';
-  import MicIcon from '@mui/icons-material/Mic';
-  import PrintIcon from '@mui/icons-material/Print';
-  import CloseIcon from '@mui/icons-material/Close';
-  import AutorenewIcon from '@mui/icons-material/Autorenew';
-  import DeleteIcon from '@mui/icons-material/Delete';
-  import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-  import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-  import { keyframes } from '@mui/system';
-  import HistoryIcon from '@mui/icons-material/History';
-  import { useTheme } from '@mui/material/styles';
-  import useMediaQuery from '@mui/material/useMediaQuery';
-  import BrushIcon from '@mui/icons-material/Brush';
-import CelebrationIcon from '@mui/icons-material/Celebration';
-import CropPortraitIcon from '@mui/icons-material/CropPortrait';
-import CropLandscapeIcon from '@mui/icons-material/CropLandscape';
 import { AnimatedBackground } from './components/AnimatedBackground';
 import { Confetti } from './components/Confetti';
 import { Mascot } from './components/Mascot';
-import MusicNoteIcon from '@mui/icons-material/MusicNote';
-import VolumeOffIcon from '@mui/icons-material/VolumeOff';
-
-const stripExtension = (name: string) => {
-  const idx = name.lastIndexOf('.');
-  return idx > 0 ? name.slice(0, idx) : name;
-};
-
-type Status = 'idle' | 'recording' | 'transcribing' | 'improving' | 'referencing' | 'generating' | 'printing' | 'done' | 'error';
+import { AppHeader } from './components/AppHeader';
+import { HistorySidebar } from './components/HistorySidebar';
+import { HistoryDialog } from './components/HistoryDialog';
+import { RecordingControls } from './components/RecordingControls';
+import { SelectedPreview } from './components/SelectedPreview';
+import { ProcessingDialog } from './components/ProcessingDialog';
+import { ConfigDialog } from './components/ConfigDialog';
+import { PromptDetailsDialog } from './components/PromptDetailsDialog';
+import { LoginOverlay } from './components/LoginOverlay';
+import { MissingEnvNotice } from './components/MissingEnvNotice';
+import { Status } from './types/status';
 
 export const App: React.FC = () => {
   const theme = useTheme();
@@ -77,8 +39,6 @@ export const App: React.FC = () => {
   const [loginPw, setLoginPw] = useState<string>('');
   const [loginErr, setLoginErr] = useState<string | null>(null);
   const [loginBusy, setLoginBusy] = useState<boolean>(false);
-  const canGenerate = runtimeConfig?.canGenerate !== false;
-  // AI improve switch synced with URL param `improve` and persisted
   const [improveEnabled, setImproveEnabled] = useState<boolean>(() => {
     const sp = new URLSearchParams(window.location.search);
     const v = sp.get('improve');
@@ -91,7 +51,6 @@ export const App: React.FC = () => {
   });
   const [improvedPrompt, setImprovedPrompt] = useState<string | null>(null);
   const [foundReferences, setFoundReferences] = useState<string[] | null>(null);
-  // Auto print state synced with URL param `auto-print` and persisted to localStorage
   const [autoPrint, setAutoPrint] = useState<boolean>(() => {
     const sp = new URLSearchParams(window.location.search);
     const v = sp.get('auto-print');
@@ -109,6 +68,24 @@ export const App: React.FC = () => {
     } catch {}
     return false;
   });
+  const [confettiKey, setConfettiKey] = useState<number | null>(null);
+  const [sfxEnabled, setSfxEnabled] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem('sfxEnabled');
+      if (v != null) return v === 'true';
+    } catch {}
+    return true;
+  });
+  const [tipsEnabled, setTipsEnabled] = useState<boolean>(() => {
+    try {
+      const v = localStorage.getItem('kidTips');
+      if (v != null) return v === 'true';
+    } catch {}
+    return true;
+  });
+  const [ideasVisible, setIdeasVisible] = useState<boolean>(true);
+  const [includeTranscribeStep, setIncludeTranscribeStep] = useState<boolean>(false);
+  const canGenerate = runtimeConfig?.canGenerate !== false;
   const goHome = () => { window.location.href = '/'; };
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -120,7 +97,6 @@ export const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Load runtime config (timeouts) then fetch history
     api.loadConfig().finally(async () => {
       try {
         const cfg = await api.getConfig();
@@ -139,7 +115,6 @@ export const App: React.FC = () => {
     }
   };
 
-  // Keep URL and localStorage in sync with autoPrint state
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
     sp.set('auto-print', String(autoPrint));
@@ -152,7 +127,6 @@ export const App: React.FC = () => {
     try { localStorage.setItem('landscapeMode', String(landscapeMode)); } catch {}
   }, [autoPrint, improveEnabled, landscapeMode]);
 
-  // Close preview with ESC key
   useEffect(() => {
     if (!selected) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -163,10 +137,13 @@ export const App: React.FC = () => {
   }, [selected]);
 
   const refreshHistory = async () => {
-    try { setHistory(await api.history()); } catch { /* ignore */ }
+    try {
+      setHistory(await api.history());
+    } catch {
+      /* ignore */
+    }
   };
 
-  // Lightweight SFX (no external assets)
   const playTone = (freq: number, duration = 0.12) => {
     try {
       const Ctx: any = (window as any).AudioContext || (window as any).webkitAudioContext;
@@ -201,23 +178,21 @@ export const App: React.FC = () => {
       cancelledRef.current = false;
       mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mr.onstop = async () => {
-        // If recording was cancelled, do not process anything.
         if (cancelledRef.current) return;
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         setProcessMode('full');
-        // Clear previous prompt so the dialog doesn't show stale text
         setPrompt('');
         setImprovedPrompt(null);
         setStatus('transcribing');
         try {
-          const { id, prompt } = await api.transcribe(blob);
-          setId(id);
-          setPrompt(prompt);
-          let finalPrompt = prompt;
+          const { id: newId, prompt: newPrompt } = await api.transcribe(blob);
+          setId(newId);
+          setPrompt(newPrompt);
+          let finalPrompt = newPrompt;
           if (improveEnabled) {
             setStatus('improving');
             try {
-              const { improved } = await api.improve(id, prompt);
+              const { improved } = await api.improve(newId, newPrompt);
               setImprovedPrompt(improved);
               finalPrompt = improved;
             } catch (e) {
@@ -225,25 +200,22 @@ export const App: React.FC = () => {
               setImprovedPrompt(null);
             }
           }
-          // New step: detect references
           setStatus('referencing');
           try {
-            const { references } = await api.detectReferences(id, finalPrompt);
+            const { references } = await api.detectReferences(newId, finalPrompt);
             setFoundReferences(references || []);
           } catch (e) {
-            // Reference detection error should stop the flow
             throw e;
           }
           setStatus('generating');
-          const gen = await api.generate(id, finalPrompt, { landscape: landscapeMode });
+          const gen = await api.generate(newId, finalPrompt, { landscape: landscapeMode });
           setImageUrl(gen.imageUrl);
           if (autoPrint) {
             setStatus('printing');
             try {
-              await api.print(id);
+              await api.print(newId);
             } catch (e) {
               console.error('Print failed:', e);
-              // Continue to done even if printing fails, image is ready
             }
           }
           setStatus('done');
@@ -267,47 +239,39 @@ export const App: React.FC = () => {
 
   const stopRecording = () => {
     mediaRecorderRef.current?.stop();
-    mediaRecorderRef.current?.stream.getTracks().forEach(t => t.stop());
+    mediaRecorderRef.current?.stream.getTracks().forEach((t) => t.stop());
   };
 
   const cancelRecording = () => {
-    // Mark as cancelled so onstop handler is ignored
     cancelledRef.current = true;
     if (mediaRecorderRef.current) {
-      // Detach handlers and stop gracefully
       mediaRecorderRef.current.ondataavailable = null as any;
       mediaRecorderRef.current.onstop = null as any;
       mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
+      mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop());
     }
     mediaRecorderRef.current = null;
     chunksRef.current = [];
     setStatus('idle');
   };
 
-  // When returning to idle, show ideas again
   useEffect(() => {
     if (status === 'idle') setIdeasVisible(true);
   }, [status]);
 
-  // Can start recording?
   const canRecord = canGenerate && (status === 'idle' || status === 'error' || status === 'done');
 
-  // Spacebar control: toggle recording (start/stop)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.code !== 'Space' && e.key !== ' ') return;
-      // Avoid when typing in inputs or editable elements
       const el = document.activeElement as HTMLElement | null;
       const tag = (el?.tagName || '').toLowerCase();
       const isEditable = !!(el && (el.isContentEditable || tag === 'input' || tag === 'textarea' || tag === 'select'));
       if (isEditable) return;
-      // Prevent page scroll
       e.preventDefault();
       if (status === 'recording') {
         stopRecording();
       } else if (canRecord) {
-        // Only start if not already busy
         startRecording();
       }
     };
@@ -315,97 +279,8 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [status, canRecord]);
 
-  const pulse = keyframes`
-    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,71,111, 0.4); }
-    70% { transform: scale(1.04); box-shadow: 0 0 0 18px rgba(239,71,111, 0); }
-    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,71,111, 0); }
-  `;
-  const recordPulse = keyframes`
-    0% { box-shadow: 0 0 0 0 rgba(239,71,111, 0.55); transform: scale(1); }
-    60% { box-shadow: 0 0 0 12px rgba(239,71,111, 0); transform: scale(1.03); }
-    100% { box-shadow: 0 0 0 0 rgba(239,71,111, 0); transform: scale(1); }
-  `;
-  const wave = keyframes`
-    0% { transform: scaleY(0.4); }
-    50% { transform: scaleY(1); }
-    100% { transform: scaleY(0.4); }
-  `;
-
-  const wiggle = keyframes`
-    0% { transform: rotate(0deg) translateY(0); }
-    30% { transform: rotate(-8deg) translateY(1px); }
-    60% { transform: rotate(6deg) translateY(-1px); }
-    100% { transform: rotate(0deg) translateY(0); }
-  `;
-
-  const [confettiKey, setConfettiKey] = useState<number | null>(null);
-  const [sfxEnabled, setSfxEnabled] = useState<boolean>(() => {
-    try { const v = localStorage.getItem('sfxEnabled'); if (v != null) return v === 'true'; } catch {}
-    return true;
-  });
-  const [tipsEnabled, setTipsEnabled] = useState<boolean>(() => {
-    try { const v = localStorage.getItem('kidTips'); if (v != null) return v === 'true'; } catch {}
-    return true;
-  });
-  const [ideasVisible, setIdeasVisible] = useState<boolean>(true);
-  // Geometry for suggestion ring on different screen sizes
-  const [ring, setRing] = useState<{ radius: number; item: number; emoji: number }>(() => ({
-    radius: isMobile ? 150 : 200,
-    item: isMobile ? 72 : 88,
-    emoji: isMobile ? 30 : 34,
-  }));
-  useEffect(() => {
-    const recalc = () => {
-      const minDim = Math.min(window.innerWidth, window.innerHeight);
-      const baseR = isMobile ? 150 : 200;
-      const item = minDim < 360 ? (isMobile ? 56 : 72) : (isMobile ? 72 : 88);
-      const padding = 16; // keep inside viewport
-      const maxR = Math.floor(minDim / 2) - Math.floor(item / 2) - padding;
-      const radius = Math.max(80, Math.min(baseR, maxR));
-      const emoji = item <= 56 ? (isMobile ? 22 : 26) : (isMobile ? 30 : 34);
-      setRing({ radius, item, emoji });
-    };
-    recalc();
-    window.addEventListener('resize', recalc);
-    return () => window.removeEventListener('resize', recalc);
-  }, [isMobile]);
-  const ringClearance = Math.max(140, ring.radius + ring.item);
-  // Whether to show the Transkrypcja step in the modal for this run
-  const [includeTranscribeStep, setIncludeTranscribeStep] = useState<boolean>(false);
-  // Persist child-friendly toggles (place after state declarations)
   useEffect(() => { try { localStorage.setItem('sfxEnabled', String(sfxEnabled)); } catch {} }, [sfxEnabled]);
   useEffect(() => { try { localStorage.setItem('kidTips', String(tipsEnabled)); } catch {} }, [tipsEnabled]);
-
-  const steps = processMode === 'printOnly'
-    ? ['Drukowanie']
-    : (() => {
-      const arr: string[] = [];
-      if (includeTranscribeStep) arr.push('Transkrypcja');
-      if (improveEnabled) arr.push('Ulepszanie promptu');
-      arr.push('Wyszukiwanie referencji');
-      arr.push('Generowanie obrazu');
-      if (autoPrint) arr.push('Drukowanie');
-      return arr;
-    })();
-  const activeStep = processMode === 'printOnly'
-    ? (status === 'printing' ? 0 : steps.length)
-    : (() => {
-      let i = 0;
-      const idx = {
-        transcribing: includeTranscribeStep ? i++ : -1,
-        improving: improveEnabled ? (includeTranscribeStep ? i++ : i++) : -1,
-        referencing: i++,
-        generating: i++,
-        printing: autoPrint ? i++ : -1,
-      } as const;
-
-      if (status === 'transcribing' && idx.transcribing >= 0) return idx.transcribing;
-      if (status === 'improving' && idx.improving >= 0) return idx.improving;
-      if (status === 'referencing') return idx.referencing;
-      if (status === 'generating') return idx.generating;
-      if (status === 'printing' && idx.printing >= 0) return idx.printing;
-      return steps.length;
-    })();
 
   const handleCloseDialog = async () => {
     if (status === 'done' && id) {
@@ -416,7 +291,6 @@ export const App: React.FC = () => {
     setProcessMode(null);
   };
 
-  // Auto-close modal and open image after all steps finish
   useEffect(() => {
     if (status !== 'done') return;
     setConfettiKey(Date.now());
@@ -426,7 +300,6 @@ export const App: React.FC = () => {
       try {
         if (processMode !== 'printOnly') {
           if (!selected && id) {
-            // Prefer existing state, else fetch freshly
             const existing = history.find((h) => h.id === id);
             if (existing) {
               setSelected(existing);
@@ -450,7 +323,6 @@ export const App: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
-  // Quick ideas generator function
   const generateFromIdea = async (text: string) => {
     try {
       const newId = String(Date.now());
@@ -492,82 +364,87 @@ export const App: React.FC = () => {
     }
   };
 
-  // Show ONLY the config error screen if env is missing
+  const handleDeleteHistoryItem = async (item: HistoryItem) => {
+    try {
+      await api.remove(item.id);
+      if (selected?.id === item.id) setSelected(null);
+      await refreshHistory();
+      setStatus((prev) => (prev === 'recording' ? prev : 'idle'));
+    } catch (err) {
+      console.error('Delete failed:', err);
+      setStatus('error');
+    }
+  };
+
+  const handleRegenerateSelected = async (item: HistoryItem) => {
+    try {
+      setIncludeTranscribeStep(false);
+      setProcessMode('full');
+      setStatus('generating');
+      setPrompt(item.prompt);
+      const newId = String(Date.now());
+      const gen = await api.generate(newId, item.prompt, { landscape: landscapeMode });
+      setImageUrl(gen.imageUrl);
+      await refreshHistory();
+      const updated = (await api.history()).find((i) => i.id === newId);
+      if (updated) setSelected(updated);
+      setPreviewBustToken(Date.now());
+      setStatus('done');
+    } catch (e) {
+      console.error('Regenerate failed:', e);
+      setStatus('error');
+    }
+  };
+
+  const handlePrintHistoryItem = async (item: HistoryItem) => {
+    try {
+      setProcessMode('printOnly');
+      setId(item.id);
+      setStatus('printing');
+      await api.print(item.id);
+      setStatus('done');
+      await refreshHistory();
+    } catch (e) {
+      console.error('Print failed:', e);
+      setStatus('error');
+    }
+  };
+
+  const handleLoginSubmit = async () => {
+    setLoginErr(null);
+    setLoginBusy(true);
+    try {
+      await auth.login(loginPw);
+      setNeedLogin(false);
+      setLoginPw('');
+      api.loadConfig().finally(async () => {
+        try { const cfg = await api.getConfig(); setRuntimeConfig(cfg); } catch {}
+        refreshHistory();
+      });
+    } catch (err: any) {
+      const msg = String(err?.message || 'Błąd logowania');
+      setLoginErr(msg.includes('Nieprawidłowe hasło') ? 'Nieprawidłowe hasło.' : 'Błąd logowania.');
+    } finally {
+      setLoginBusy(false);
+    }
+  };
+
+  const printableHistory = history.filter((item) => !!item.imageUrl);
+  const processingOpen = status !== 'idle' && status !== 'recording';
+
   if (runtimeConfig && runtimeConfig.missingEnv && runtimeConfig.missingEnv.length > 0) {
-    return (
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', p: 2 }}>
-        <Box sx={{ width: '100%', maxWidth: 900 }}>
-          <Alert severity={canGenerate ? 'warning' : 'error'} sx={{ p: 3, '& .MuiAlert-message': { width: '100%' } }}>
-            <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-              Brakuje konfiguracji środowiska
-            </Typography>
-            <Typography variant="body1" sx={{ mb: 1.5 }}>
-              Brakujące zmienne:
-            </Typography>
-            <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', wordBreak: 'break-word' }}>
-              {runtimeConfig.missingEnv.join(', ')}
-            </Box>
-            {!canGenerate && (
-              <Typography variant="body1" sx={{ mt: 1.5, fontWeight: 600 }}>
-                Generowanie kolorowanek jest zablokowane do czasu uzupełnienia konfiguracji.
-              </Typography>
-            )}
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-              Uzupełnij zmienne środowiskowe i zrestartuj backend.
-            </Typography>
-          </Alert>
-        </Box>
-      </Box>
-    );
+    return <MissingEnvNotice runtimeConfig={runtimeConfig} canGenerate={canGenerate} />;
   }
 
-  // Login overlay when backend requires auth
   if (needLogin) {
     return (
-      <Box sx={{ display: 'grid', placeItems: 'center', height: '100dvh', p: 2, bgcolor: 'background.default' }}>
-        <Box sx={{ width: '100%', maxWidth: 420, bgcolor: 'background.paper', p: 3, borderRadius: 2, boxShadow: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>Wymagane logowanie</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Podaj hasło aby uzyskać dostęp.</Typography>
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            setLoginErr(null);
-            setLoginBusy(true);
-            try {
-              await auth.login(loginPw);
-              setNeedLogin(false);
-              setLoginPw('');
-              // After login, load config and history
-              api.loadConfig().finally(async () => {
-                try { const cfg = await api.getConfig(); setRuntimeConfig(cfg); } catch {}
-                refreshHistory();
-              });
-            } catch (err: any) {
-              const msg = String(err?.message || 'Błąd logowania');
-              setLoginErr(msg.includes('Nieprawidłowe hasło') ? 'Nieprawidłowe hasło.' : 'Błąd logowania.');
-            } finally {
-              setLoginBusy(false);
-            }
-          }}>
-            <TextField
-              type="password"
-              label="Hasło"
-              value={loginPw}
-              onChange={(e) => setLoginPw(e.target.value)}
-              autoFocus
-              fullWidth
-              disabled={loginBusy}
-            />
-            {loginErr && (
-              <Alert severity="error" sx={{ mt: 1.5 }}>{loginErr}</Alert>
-            )}
-            <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-              <Button type="submit" variant="contained" disabled={loginBusy} fullWidth>
-                {loginBusy ? 'Logowanie…' : 'Zaloguj'}
-              </Button>
-            </Stack>
-          </form>
-        </Box>
-      </Box>
+      <LoginOverlay
+        password={loginPw}
+        error={loginErr}
+        busy={loginBusy}
+        onPasswordChange={setLoginPw}
+        onSubmit={handleLoginSubmit}
+      />
     );
   }
 
@@ -575,174 +452,24 @@ export const App: React.FC = () => {
     <Box sx={{ display: 'flex', height: '100dvh', position: 'relative', width: '100%', overflowX: 'hidden' }}>
       <AnimatedBackground />
       <Confetti triggerKey={confettiKey} />
-      <AppBar position="fixed" color="primary" elevation={1}>
-        <Toolbar sx={{ px: { xs: 1, sm: 2 } }}>
-          {isMobile && (
-            <Tooltip title="Historia" arrow>
-              <IconButton edge="start" color="inherit" onClick={() => setHistoryOpen(true)} aria-label="Historia" sx={{ mr: 1 }}>
-                <HistoryIcon />
-              </IconButton>
-            </Tooltip>
-          )}
-          <Typography
-            variant="h6"
-            component="div"
-            sx={{
-              flexGrow: 1,
-              minWidth: 0,
-              lineHeight: { xs: 1.15, sm: 1.2 },
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: { xs: 'center', sm: 'flex-start' },
-            }}
-          >
-            <ButtonBase
-              onClick={goHome}
-              aria-label="Przejdź do strony głównej"
-              sx={{
-                color: 'common.white',
-                fontWeight: 800,
-                textShadow: '0 1px 2px rgba(0,0,0,0.25)',
-                borderRadius: 1,
-                px: 0.5,
-                py: 0.25,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: { xs: 'center', sm: 'flex-start' },
-                gap: { xs: 0.5, sm: 1 },
-                fontSize: 'inherit',
-                minWidth: 0,
-                width: '100%',
-              }}
-            >
-              <Box
-                component="span"
-                sx={{
-                  fontSize: { xs: '1.25rem', sm: 'inherit' },
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                Kolorowanki
-              </Box>
-              <BrushIcon
-                sx={{
-                  fontSize: 22,
-                  animation: `${wiggle} 2.4s ease-in-out infinite`,
-                  transformOrigin: 'bottom center',
-                  color: 'inherit',
-                }}
-              />
-            </ButtonBase>
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Tooltip title={sfxEnabled ? 'Dźwięki włączone' : 'Dźwięki wyłączone'} arrow>
-              <Box sx={{ ml: { xs: 0.75, sm: 1.5 }, pt: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                {sfxEnabled ? (
-                  <MusicNoteIcon fontSize="small" sx={{ color: 'common.white', mt: 1, mb: 0 }} />
-                ) : (
-                  <VolumeOffIcon fontSize="small" sx={{ color: 'common.white', mt: 1, mb: 0 }} />
-                )}
-                <Switch
-                  checked={sfxEnabled}
-                  onChange={(e) => setSfxEnabled(e.target.checked)}
-                  color={sfxEnabled ? 'success' : 'default'}
-                  inputProps={{ 'aria-label': 'Dźwięki' }}
-                />
-              </Box>
-            </Tooltip>
-            <Tooltip title="Konfiguracja" arrow>
-              <IconButton
-                size="small"
-                sx={{ ml: { xs: 0.75, sm: 1.5 }, color: 'common.white' }}
-                onClick={async () => { await ensureConfigLoaded(); setConfigOpen(true); }}
-                aria-label="Konfiguracja"
-              >
-                <InfoOutlinedIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        </Toolbar>
-      </AppBar>
+      <AppHeader
+        isMobile={isMobile}
+        sfxEnabled={sfxEnabled}
+        onToggleSfx={setSfxEnabled}
+        onOpenHistory={() => setHistoryOpen(true)}
+        onOpenConfig={async () => { await ensureConfigLoaded(); setConfigOpen(true); }}
+        onGoHome={goHome}
+      />
       <Box sx={{ display: 'flex', flex: 1, minHeight: 0, pt: { xs: 7, sm: 8 }, position: 'relative', zIndex: 1 }}>
-        {/* Główny interfejs renderowany tylko gdy konfiguracja jest kompletna */}
         {!isMobile && (
-        <Box component="aside" sx={{ width: 480, borderRight: 1, borderColor: 'divider', p: 2, overflow: 'auto' }}>
-          <List dense>
-            {history.filter(item => !!item.imageUrl).map(item => (
-              <React.Fragment key={item.id}>
-                <ListItem
-                  disableGutters
-                  alignItems="flex-start"
-                  onClick={() => item.imageUrl && setSelected(item)}
-                  sx={{ cursor: item.imageUrl ? 'pointer' : 'default', bgcolor: selected?.id === item.id ? 'action.selected' : undefined, px: 1 }}
-                >
-                  <ListItemText
-                    primaryTypographyProps={{ variant: 'subtitle1' }}
-                    secondaryTypographyProps={{ component: 'div' }}
-                    primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: 1, gap: 1 }}>
-                        <span>{new Date(item.createdAt).toLocaleString()}</span>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          {(item.prompt || item.improvedPrompt) && (
-                            <Tooltip title="Prompt" arrow>
-                              <IconButton
-                                edge="end"
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setPromptInfoItem(item);
-                                }}
-                                sx={{ p: 0.25, bgcolor: 'common.white', color: 'info.main', '&:hover': { bgcolor: 'grey.100' } }}
-                                aria-label="Prompt"
-                              >
-                                <InfoOutlinedIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                          <Tooltip title="Usuń kolorowankę">
-                            <IconButton
-                              edge="end"
-                              size="small"
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                try {
-                                  await api.remove(item.id);
-                                  if (selected?.id === item.id) setSelected(null);
-                                  await refreshHistory();
-                                } catch (err) {
-                                  console.error('Delete failed:', err);
-                                  setStatus('error');
-                                }
-                              }}
-                              sx={{ p: 0.25, bgcolor: 'common.white', color: 'error.main', '&:hover': { bgcolor: 'grey.100' } }}
-                              aria-label="Usuń"
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </Box>
-                    }
-                    secondary={
-                      <>
-                        {item.imageUrl && (
-                          <Box sx={{ mt: 1, borderRadius: 2, border: 1, borderColor: 'divider', overflow: 'hidden', transition: 'transform .2s ease, box-shadow .2s ease', '&:hover': { transform: 'scale(1.02) rotate(-0.2deg)', boxShadow: '0 10px 24px rgba(0,0,0,0.10)' } }}>
-                            <Box component="img" src={item.imageUrl} alt="podgląd" loading="lazy" decoding="async" sx={{ width: '100%', height: 'auto', display: 'block' }} />
-                          </Box>
-                        )}
-                      </>
-                    }
-                  />
-                </ListItem>
-                <Divider component="li" />
-              </React.Fragment>
-            ))}
-          </List>
-        </Box>
+          <HistorySidebar
+            items={printableHistory}
+            selectedId={selected?.id}
+            onSelect={(item) => item.imageUrl && setSelected(item)}
+            onShowPrompt={setPromptInfoItem}
+            onDelete={handleDeleteHistoryItem}
+          />
         )}
-
         <Box
           component="main"
           sx={{
@@ -758,730 +485,64 @@ export const App: React.FC = () => {
             px: { xs: 1, sm: 2 },
           }}
         >
-          {(selected && status !== 'recording') ? (
-            <Box sx={{ display: 'flex', width: '100%', height: '100%', gap: 2 }}>
-              {/* Image area on the left (bigger) */}
-              {selected.imageUrl && (
-                <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pb: { xs: 8, sm: 0 } }}>
-                  <Box
-                    component="img"
-                    src={`${selected.imageUrl}?t=${previewBustToken}`}
-                    alt={selected.prompt}
-                    loading="eager"
-                    decoding="async"
-                    sx={{
-                      maxWidth: '100%',
-                      maxHeight: '100%',
-                      objectFit: 'contain',
-                      borderRadius: 2,
-                      border: 1,
-                      borderColor: 'divider',
-                      boxShadow: '0 12px 40px rgba(0,0,0,0.10)',
-                      position: 'relative',
-                      outline: '3px dashed rgba(251,133,0,0.25)',
-                      outlineOffset: 6,
-                    }}
-                  />
-                </Box>
-              )}
-
-              {/* Actions: vertical on desktop, bottom bar on mobile */}
-              {!isMobile ? (
-                <Box sx={{ width: 64, display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center' }}>
-                  <Tooltip title="Zamknij podgląd">
-                    <IconButton
-                      onClick={() => setSelected(null)}
-                      sx={{ bgcolor: 'common.black', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'grey.800' } }}
-                      aria-label="Zamknij"
-                    >
-                      <CloseIcon />
-                    </IconButton>
-                  </Tooltip>
-                  {selected.imageUrl && (
-                    <Tooltip title="Wygeneruj ponownie">
-                      <IconButton
-                        onClick={async () => {
-                          try {
-                            setIncludeTranscribeStep(false);
-                            setProcessMode('full');
-                            setStatus('generating');
-                            setPrompt(selected.prompt);
-                            const newId = String(Date.now());
-                            const gen = await api.generate(newId, selected.prompt, { landscape: landscapeMode });
-                            setImageUrl(gen.imageUrl);
-                            await refreshHistory();
-                            const updated = (await api.history()).find(i => i.id === newId);
-                            if (updated) setSelected(updated);
-                            setPreviewBustToken(Date.now());
-                            setStatus('done');
-                          } catch (e) {
-                            console.error('Regenerate failed:', e);
-                            setStatus('error');
-                          }
-                        }}
-                        sx={{ bgcolor: 'info.main', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'info.dark' } }}
-                        aria-label="Wygeneruj ponownie"
-                        disabled={!(status === 'idle' || status === 'done' || status === 'error')}
-                      >
-                        <AutorenewIcon />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                  {selected.imageUrl && (
-                    <Tooltip title="Drukuj kolorowankę">
-                      <IconButton
-                        onClick={async () => {
-                          try {
-                            setProcessMode('printOnly');
-                            setId(selected.id);
-                            setStatus('printing');
-                            await api.print(selected.id);
-                            setStatus('done');
-                            await refreshHistory();
-                          } catch (e) {
-                            console.error('Print failed:', e);
-                            setStatus('error');
-                          }
-                        }}
-                        sx={{ bgcolor: 'success.main', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'success.dark' } }}
-                        aria-label="Drukuj"
-                        disabled={!(status === 'idle' || status === 'done' || status === 'error')}
-                      >
-                        <PrintIcon />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                  {selected && (
-                    <Tooltip title="Usuń kolorowankę">
-                      <IconButton
-                        onClick={async () => {
-                          try {
-                            await api.remove(selected.id);
-                            setSelected(null);
-                            await refreshHistory();
-                            setStatus('idle');
-                          } catch (e) {
-                            console.error('Delete failed:', e);
-                            setStatus('error');
-                          }
-                        }}
-                        sx={{ bgcolor: 'error.main', color: 'common.white', boxShadow: 1, '&:hover': { bgcolor: 'error.dark' } }}
-                        aria-label="Usuń"
-                        disabled={!(status === 'idle' || status === 'done' || status === 'error')}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                </Box>
-              ) : (
-                <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 12, display: 'flex', justifyContent: 'center', gap: 2 }}>
-                  <Tooltip title="Zamknij podgląd">
-                    <IconButton onClick={() => setSelected(null)} sx={{ bgcolor: 'common.black', color: 'common.white', boxShadow: 2 }} aria-label="Zamknij">
-                      <CloseIcon />
-                    </IconButton>
-                  </Tooltip>
-                  {selected.imageUrl && (
-                    <Tooltip title="Wygeneruj ponownie">
-                      <IconButton
-                        onClick={async () => {
-                          try {
-                            setIncludeTranscribeStep(false);
-                            setProcessMode('full');
-                            setStatus('generating');
-                            setPrompt(selected.prompt);
-                            const newId = String(Date.now());
-                            const gen = await api.generate(newId, selected.prompt, { landscape: landscapeMode });
-                            setImageUrl(gen.imageUrl);
-                            await refreshHistory();
-                            const updated = (await api.history()).find(i => i.id === newId);
-                            if (updated) setSelected(updated);
-                            setPreviewBustToken(Date.now());
-                            setStatus('done');
-                          } catch (e) {
-                            console.error('Regenerate failed:', e);
-                            setStatus('error');
-                          }
-                        }}
-                        sx={{ bgcolor: 'info.main', color: 'common.white', boxShadow: 2 }}
-                        aria-label="Wygeneruj ponownie"
-                      >
-                        <AutorenewIcon />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                  {selected.id && (
-                    <Tooltip title="Drukuj">
-                      <IconButton
-                        onClick={async () => {
-                          try {
-                            setProcessMode('printOnly');
-                            setId(selected.id);
-                            setStatus('printing');
-                            await api.print(selected.id);
-                            setStatus('done');
-                            await refreshHistory();
-                          } catch (e) {
-                            console.error('Print failed:', e);
-                            setStatus('error');
-                          }
-                        }}
-                        sx={{ bgcolor: 'success.main', color: 'common.white', boxShadow: 2 }}
-                        aria-label="Drukuj"
-                        disabled={!(status === 'idle' || status === 'done' || status === 'error')}
-                      >
-                        <PrintIcon />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                  {selected && (
-                    <Tooltip title="Usuń kolorowankę">
-                      <IconButton
-                        onClick={async () => {
-                          try {
-                            await api.remove(selected.id);
-                            setSelected(null);
-                            await refreshHistory();
-                            setStatus('idle');
-                          } catch (e) {
-                            console.error('Delete failed:', e);
-                            setStatus('error');
-                          }
-                        }}
-                        sx={{ bgcolor: 'error.main', color: 'common.white', boxShadow: 2 }}
-                        aria-label="Usuń"
-                        disabled={!(status === 'idle' || status === 'done' || status === 'error')}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                </Box>
-              )}
-            </Box>
+          {selected && status !== 'recording' ? (
+            <SelectedPreview
+              item={selected}
+              isMobile={isMobile}
+              previewBustToken={previewBustToken}
+              status={status}
+              onClose={() => setSelected(null)}
+              onRegenerate={() => handleRegenerateSelected(selected)}
+              onPrint={() => handlePrintHistoryItem(selected)}
+              onDelete={() => handleDeleteHistoryItem(selected)}
+            />
           ) : (
-            <Stack spacing={2} alignItems="center" sx={{ width: '100%', maxWidth: { xs: 420, sm: 640 }, mx: 'auto' }}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  gap: { xs: 1, sm: 1.5 },
-                  bgcolor: (theme) => theme.palette.background.paper,
-                  borderRadius: 3,
-                  px: { xs: 1, sm: 1.5 },
-                  py: { xs: 0.75, sm: 1 },
-                  boxShadow: 4,
-                  width: 'auto',
-                  maxWidth: '100%',
-                  position: 'relative',
-                  zIndex: 2,
-                }}
-              >
-                <Tooltip title={landscapeMode ? 'Orientacja pozioma' : 'Orientacja pionowa'} arrow>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    {landscapeMode ? (
-                      <CropLandscapeIcon color="primary" />
-                    ) : (
-                      <CropPortraitIcon color="action" />
-                    )}
-                    <Switch
-                      size="small"
-                      checked={landscapeMode}
-                      onChange={(e) => setLandscapeMode(e.target.checked)}
-                      color="primary"
-                      inputProps={{ 'aria-label': 'Orientacja pozioma' }}
-                    />
-                  </Box>
-                </Tooltip>
-                <Tooltip title={autoPrint ? 'Automatyczne drukowanie włączone' : 'Kolorowanki nie będą drukowane automatycznie'} arrow>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <PrintIcon color={autoPrint ? 'primary' : 'action'} />
-                    <Switch
-                      size="small"
-                      checked={autoPrint}
-                      onChange={(e) => setAutoPrint(e.target.checked)}
-                      color="primary"
-                      inputProps={{ 'aria-label': 'Automatyczne drukowanie' }}
-                    />
-                  </Box>
-              </Tooltip>
-              <Tooltip title={improveEnabled ? 'Ulepszanie promptu włączone' : 'Wysyłaj oryginalny prompt'} arrow>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <AutoAwesomeIcon color={improveEnabled ? 'primary' : 'action'} />
-                  <Switch
-                      size="small"
-                      checked={improveEnabled}
-                      onChange={(e) => setImproveEnabled(e.target.checked)}
-                      color="primary"
-                      inputProps={{ 'aria-label': 'Ulepszanie promptu' }}
-                    />
-                  </Box>
-                </Tooltip>
-              </Box>
-              {(() => {
-                const ringPadding = isMobile ? 0 : 80;
-                const ringBoxSize = ring.radius * 2 + ring.item + ringPadding;
-                const ringBoxSizePx = `${ringBoxSize}px`;
-                return (
-                  <Box sx={{ position: 'relative', width: ringBoxSizePx, height: ringBoxSizePx, maxWidth: '100%', maxHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center', mt: ringClearance }}>
-                    <Fab
-                      aria-label="Nagraj prompt głosowy"
-                      color="error"
-                      size="large"
-                      sx={{
-                        width: { xs: 96, sm: 168 },
-                        height: { xs: 96, sm: 168 },
-                        animation: status === 'recording' ? `${recordPulse} 1.4s ease-in-out infinite` : (canRecord ? `${pulse} 1.8s ease-in-out infinite` : 'none'),
-                        '&.Mui-disabled': {
-                          bgcolor: 'error.main',
-                          color: 'common.white',
-                          opacity: 1,
-                        },
-                      }}
-                      disabled={!canRecord}
-                      onClick={canRecord ? startRecording : undefined}
-                    >
-                      <MicIcon sx={{ fontSize: { xs: 36, sm: 56 } }} />
-                    </Fab>
-
-                    {/* Idea icons around mic (emoji-only) */}
-                    {ideasVisible && status === 'idle' && (() => {
-                      const catalog = [
-                    { icon: '🌈', label: 'Tęcze', prompt: 'Tęcze z 7 paskami na kazdy kolor' },
-                    { icon: '🦄', label: 'Jednorożce', prompt: 'Jednorożce w magicznym lesie' },
-                    { icon: '🦁', label: 'Zwierzęta w zoo', prompt: 'Lew, żyrafa i słoń w zoo' },
-                    { icon: '🐶', label: 'Pieski', prompt: 'Pieski bawiące się piłką' },
-                    { icon: '🐱', label: 'Kotki', prompt: 'Kotki śpiące na poduszkach' },
-                    { icon: '👗', label: 'Lalki', prompt: 'Lalki w stylu Barbie w modnych strojach i z długimi włosami' },
-                    { icon: '🚗', label: 'Samochody', prompt: 'Samochody wyścigowe na torze' },
-                    { icon: '🚀', label: 'Rakiety', prompt: 'Rakiety lecące w kosmos, planety i gwiazdy' },
-                    { icon: '🦸‍♀️', label: 'Superbohaterowie', prompt: 'Superbohaterowie w akcji w dynamicznych pozach' },
-                    { icon: '🧚‍♀️', label: 'Wróżki', prompt: 'Bajkowe wróżki z różdżkami' },
-                    { icon: '🐯', label: 'Tygryski', prompt: 'Przyjazne tygryski w dżungli' },
-                    { icon: '🦓', label: 'Zebry', prompt: 'Zebra na sawannie' },
-                    { icon: '🦒', label: 'Żyrafy', prompt: 'Żyrafa pod drzewem akacji' },
-                    { icon: '🐘', label: 'Słonie', prompt: 'Słoń z trąbą unoszącą wodę' },
-                    { icon: '🐵', label: 'Małpki', prompt: 'Wesołe małpki na lianach' },
-                    { icon: '🐸', label: 'Żabki', prompt: 'Żabka na liściu nenufaru' },
-                    { icon: '🐢', label: 'Żółwie', prompt: 'Żółw na plaży' },
-                    { icon: '🐳', label: 'Ocean', prompt: 'Podwodny świat z wielorybem i rybkami' },
-                    { icon: '🦕', label: 'Dinozaury', prompt: 'Przyjazne dinozaury w parku' },
-                    { icon: '🏰', label: 'Zamki', prompt: 'Bajkowy zamek na wzgórzu' },
-                    { icon: '👸', label: 'Księżniczki', prompt: 'Księżniczka w sukni balowej' },
-                    { icon: '🤴', label: 'Książęta', prompt: 'Książę z mieczem, uśmiechnięty' },
-                    { icon: '🪖', label: 'Żołnierzyki', prompt: 'Zabawkowe żołnierzyki na paradzie z flagami' },
-                    { icon: '🐉', label: 'Smoki', prompt: 'Przyjazny smok nad wioską' },
-                    { icon: '🧜‍♀️', label: 'Syrenki', prompt: 'Syrenka w morzu, muszelki i rybki' },
-                    { icon: '🦋', label: 'Motyle', prompt: 'Motyle nad łąką' },
-                    { icon: '🌸', label: 'Kwiaty', prompt: 'Różne kwiaty w ogrodzie' },
-                    { icon: '🌵', label: 'Pustynia', prompt: 'Kaktusy i zachód słońca' },
-                    { icon: '🌲', label: 'Las', prompt: 'Leśne zwierzątka i drzewa' },
-                    { icon: '🏖️', label: 'Plaża', prompt: 'Plaża z zamkiem z piasku, wiaderkiem i łopatką' },
-                    { icon: '🏜️', label: 'Kaniony', prompt: 'Skaliste kaniony i słońce' },
-                    { icon: '🏞️', label: 'Góry', prompt: 'Góry, rzeka i sosny' },
-                    { icon: '🚌', label: 'Autobus', prompt: 'Wesoły szkolny autobus' },
-                    { icon: '🚒', label: 'Straż', prompt: 'Wóz strażacki w akcji (bez ognia)' },
-                    { icon: '🚑', label: 'Karetka', prompt: 'Karetka z uśmiechniętym kierowcą' },
-                    { icon: '✈️', label: 'Samoloty', prompt: 'Samolot nad chmurami' },
-                    { icon: '🚂', label: 'Pociągi', prompt: 'Lokomotywa na torach' },
-                    { icon: '🚲', label: 'Rowerki', prompt: 'Dziecięcy rowerek w parku' },
-                    { icon: '🛵', label: 'Skutery', prompt: 'Skuter w mieście' },
-                    { icon: '🧩', label: 'Kształty', prompt: 'Duże proste kształty geometryczne' },
-                    { icon: '🎈', label: 'Balony', prompt: 'Mnóstwo balonów nad miasteczkiem' },
-                    { icon: '🎠', label: 'Karuzela', prompt: 'Karuzela z konikami' },
-                    { icon: '🎪', label: 'Cyrk', prompt: 'Cyrkowy namiot i przyjazny klaun' },
-                    { icon: '🎃', label: 'Dynia', prompt: 'Uśmiechnięte dynie i jesienne liście' },
-                    { icon: '❄️', label: 'Zima', prompt: 'Bałwan i śnieżynki' },
-                    { icon: '🌞', label: 'Lato', prompt: 'Słońce, plaża i lody' },
-                    { icon: '🌧️', label: 'Deszcz', prompt: 'Parasolka i kałuże' },
-                    { icon: '🪐', label: 'Planety', prompt: 'Układ słoneczny: planety i gwiazdy' },
-                    { icon: '🧁', label: 'Słodkości', prompt: 'Babeczki i cukierki' },
-                    { icon: '🍕', label: 'Pizza', prompt: 'Wesoła pizza z uśmiechem' },
-                    { icon: '🍦', label: 'Lody', prompt: 'Pucharek lodów z posypką' },
-                    { icon: '🏀', label: 'Sport', prompt: 'Piłki sportowe: koszykówka i piłka nożna' },
-                    { icon: '🎸', label: 'Muzyka', prompt: 'Instrumenty muzyczne' },
-                    { icon: '🧱', label: 'Klocki', prompt: 'Wieża z klocków' },
-                    // zawsze dostępne „Losowa”
-                    { icon: '🎲', label: 'Losowa kolorowanka — zaskocz mnie', random: true },
-                  ] as const;
-                  // losowy wybór 9 z katalogu (bez pozycji losowej) + zawsze „Losowa”
-                  const pool = catalog.filter((it: any) => !it.random);
-                  const randomItem = catalog.find((it: any) => it.random)!;
-                  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-                  const items = [...shuffled.slice(0, 9), randomItem];
-                  const radius = ring.radius;
-                  return (
-                    <>
-                      {/* Spinning ring wrapper (very slow); pauses on hover */}
-                      <Box sx={{ position: 'absolute', inset: 0, transformOrigin: '50% 50%', animation: 'slowSpin 80s linear infinite', '&:hover': { animationPlayState: 'paused' }, '&:hover *': { animationPlayState: 'paused' } }}>
-                      {items.map((it, idx) => {
-                        const angle = (idx / items.length) * Math.PI * 2 - Math.PI / 2; // start at top
-                        const x = Math.cos(angle) * radius;
-                        const y = Math.sin(angle) * radius;
-                        return (
-                          <Tooltip key={`${it.label}-${idx}`} title={it.label} arrow>
-                          <Box
-                            onClick={() => {
-                              const prompt = (it as any).random
-                                ? 'Wymyśl dla dziecka kreatywną scenę — losowy temat'
-                                : (it as any).prompt;
-                              generateFromIdea(prompt);
-                            }}
-                            role="button"
-                            aria-label={`Pomysł: ${it.label}`}
-                            sx={{
-                              position: 'absolute',
-                              left: `calc(50% + ${x}px)`,
-                              top: `calc(50% + ${y}px)`,
-                              transform: 'translate(-50%, -50%)',
-                              width: ring.item,
-                              height: ring.item,
-                              borderRadius: '50%',
-                              bgcolor: '#FFB703',
-                              color: 'primary.contrastText',
-                              opacity: 0.7,
-                              boxShadow: 2,
-                              display: 'grid',
-                              placeItems: 'center',
-                              cursor: 'pointer',
-                              userSelect: 'none',
-                              transition: 'transform .12s ease, box-shadow .2s ease, opacity .12s ease',
-                              '&:hover': { transform: 'translate(-50%, -50%) scale(1.06)', boxShadow: 4, opacity: 1 },
-                              '&:active': { transform: 'translate(-50%, -50%) scale(0.96)' },
-                            }}
-                           >
-                             <Box sx={{ fontSize: ring.emoji, lineHeight: 1, animation: 'slowSpinReverse 80s linear infinite' }} component="span">{it.icon}</Box>
-                           </Box>
-                           </Tooltip>
-                         );
-                       })}
-                      </Box>
-                      <style>{`@keyframes slowSpin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
-                        @keyframes slowSpinReverse { from { transform: rotate(0deg) } to { transform: rotate(-360deg) } }
-                        @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }`}</style>
-                    </>
-                  );
-                })()}
-              </Box>
-            );
-          })()}
-
-              {/* Visual hint only (no text) below the record button */}
-              {status !== 'recording' && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary', height: 18 }}>
-                  <BrushIcon fontSize="small" sx={{ animation: `${wiggle} 2.4s ease-in-out infinite`, transformOrigin: 'bottom center', opacity: 0.85 }} />
-                </Box>
-              )}
-
-              {status === 'recording' && (
-                <Box aria-label="Nagrywanie – wizualizacja dźwięku" sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.6, height: 40 }}>
-                  {Array.from({ length: 12 }).map((_, i) => (
-                    <Box
-                      // eslint-disable-next-line react/no-array-index-key
-                      key={i}
-                      sx={{
-                        width: { xs: 4, sm: 6 },
-                        height: '100%',
-                        transformOrigin: 'center bottom',
-                        backgroundColor: 'error.main',
-                        borderRadius: 1,
-                        animation: `${wave} ${1.1 + (i % 5) * 0.12}s ease-in-out ${i * 0.08}s infinite`,
-                        boxShadow: '0 2px 8px rgba(239,71,111,0.35)',
-                      }}
-                    />
-                  ))}
-                </Box>
-              )}
-
-              {status === 'recording' && (
-                <Stack direction="row" spacing={1}>
-                  <Button variant="contained" color="success" onClick={stopRecording} startIcon={<AutoAwesomeIcon />}>Generuj</Button>
-                  <Button variant="contained" color="error" onClick={cancelRecording} startIcon={<CloseIcon />}>Anuluj</Button>
-                </Stack>
-              )}
-
-              {/* Removed text chips; icons encircle mic button */}
-            </Stack>
+            <RecordingControls
+              status={status}
+              isMobile={isMobile}
+              canRecord={canRecord}
+              autoPrint={autoPrint}
+              improveEnabled={improveEnabled}
+              landscapeMode={landscapeMode}
+              ideasVisible={ideasVisible}
+              onAutoPrintChange={setAutoPrint}
+              onImproveChange={setImproveEnabled}
+              onLandscapeChange={setLandscapeMode}
+              onStartRecording={startRecording}
+              onStopRecording={stopRecording}
+              onCancelRecording={cancelRecording}
+              onIdeaSelect={generateFromIdea}
+            />
           )}
         </Box>
       </Box>
-
-      <Dialog onClose={handleCloseDialog} open={status !== 'idle' && status !== 'recording'} fullWidth maxWidth="sm" fullScreen={isMobile}>
-        <DialogTitle>Przetwarzanie…</DialogTitle>
-        <DialogContent>
-          <Stepper activeStep={activeStep} alternativeLabel sx={{ my: 2 }}>
-            {steps.map(label => (
-              <Step key={label}>
-                <StepLabel>{label}</StepLabel>
-              </Step>
-            ))}
-          </Stepper>
-          {prompt && processMode !== 'printOnly' && (
-            <Box sx={{ mt: 1.5 }}>
-              <Typography variant="subtitle2" gutterBottom>Podstawowy prompt</Typography>
-              <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-                {prompt}
-              </Box>
-              {improveEnabled && improvedPrompt != null && (
-                <Box sx={{ mt: 1.5 }}>
-                  <Typography variant="subtitle2" gutterBottom>Ulepszony prompt</Typography>
-                  <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-                    {improvedPrompt}
-                  </Box>
-                </Box>
-              )}
-              {foundReferences != null && (
-                <Box sx={{ mt: 1.5 }}>
-                  <Typography variant="subtitle2" gutterBottom>Wybrane referencje</Typography>
-                  <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-                    {foundReferences.length > 0 ? foundReferences.map(stripExtension).join(', ') : '— (brak)'}
-                  </Box>
-                </Box>
-              )}
-            </Box>
-          )}
-          {/* Subtle progress bar while steps are running */}
-          {(status === 'transcribing' || status === 'improving' || status === 'referencing' || status === 'generating' || status === 'printing') && (
-            <Box sx={{ mt: 1 }}>
-              <Box sx={{ height: 4, bgcolor: 'action.selected', borderRadius: 999, overflow: 'hidden' }}>
-                <Box sx={{ width: '40%', height: '100%', bgcolor: 'primary.main', borderRadius: 999, animation: 'indeterminateSlide 1.6s ease-in-out infinite' }} />
-              </Box>
-              <style>{`
-                @keyframes indeterminateSlide {
-                  0% { transform: translateX(-100%); }
-                  50% { transform: translateX(120%); }
-                  100% { transform: translateX(250%); }
-                }
-              `}</style>
-            </Box>
-          )}
-
-          {status === 'done' && (
-            <>
-              <Alert severity="success" icon={<CelebrationIcon />} sx={{ mt: 2 }}>Gotowe!</Alert>
-              {imageUrl && (
-                <Box sx={{ mt: 2 }}>
-                  <Box
-                    component="img"
-                    src={imageUrl}
-                    alt="wynik"
-                    sx={{
-                      display: 'block',
-                      width: '100%',
-                      height: 'auto',
-                      maxHeight: { xs: '60vh', sm: '70vh' },
-                      objectFit: 'contain',
-                      borderRadius: 2,
-                      border: 1,
-                      borderColor: 'divider',
-                      boxShadow: '0 12px 40px rgba(0,0,0,0.10)',
-                      outline: '3px dashed rgba(251,133,0,0.25)',
-                      outlineOffset: 6,
-                    }}
-                  />
-                </Box>
-              )}
-            </>
-          )}
-          {status === 'error' && (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              {errorText || 'Wystąpił błąd. Spróbuj ponownie.'}
-            </Alert>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog} autoFocus startIcon={<CloseIcon />}>Zamknij</Button>
-        </DialogActions>
-      </Dialog>
-      <Dialog open={configOpen} onClose={() => setConfigOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Konfiguracja</DialogTitle>
-        <DialogContent dividers>
-          <Box>
-            <Typography variant="subtitle2" gutterBottom>Więcej szczegółów i kod źródłowy</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Zobacz projekt na
-              {' '}
-              <Link href="https://github.com/Patresss/coloring-book-generator" target="_blank" rel="noopener noreferrer">GitHub</Link>
-              {' '}— instrukcje, zmiany i źródła.
-            </Typography>
-          </Box>
-          <Divider sx={{ my: 2 }} />
-          <Stack spacing={1.5} sx={{ mt: 1 }}>
-            <Box>
-              <Typography variant="subtitle2">OPENAI_IMAGE_MODEL</Typography>
-              <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace' }}>
-                {runtimeConfig?.imageModel || '—'}
-              </Box>
-            </Box>
-            <Box>
-              <Typography variant="subtitle2">OPENAI_IMAGE_REFERENCES_MODEL</Typography>
-              <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace' }}>
-                {runtimeConfig?.imageReferencesModel || '—'}
-              </Box>
-            </Box>
-            <Box>
-              <Typography variant="subtitle2">OPENAI_TEXT_MODEL</Typography>
-              <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace' }}>
-                {runtimeConfig?.textModel || '—'}
-              </Box>
-            </Box>
-            <Box>
-              <Typography variant="subtitle2">OPENAI_STT_MODEL</Typography>
-              <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace' }}>
-                {runtimeConfig?.sttModel || '—'}
-              </Box>
-            </Box>
-            <Box>
-              <Typography variant="subtitle2">OPENAI_TIMEOUT_MS</Typography>
-              <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace' }}>
-                {runtimeConfig?.openaiTimeoutMs ?? '—'}
-              </Box>
-            </Box>
-            <Box>
-              <Typography variant="subtitle2">PRINTER_URI</Typography>
-              <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace', wordBreak: 'break-all' }}>
-                {runtimeConfig?.printerUri || '—'}
-              </Box>
-            </Box>
-          </Stack>
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
-            Aby zmienić wartości, edytuj zmienne środowiskowe i zrestartuj aplikacje.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfigOpen(false)} startIcon={<CloseIcon />}>Zamknij</Button>
-        </DialogActions>
-      </Dialog>
+      <ProcessingDialog
+        open={processingOpen}
+        status={status}
+        processMode={processMode}
+        prompt={prompt}
+        improveEnabled={improveEnabled}
+        improvedPrompt={improvedPrompt}
+        foundReferences={foundReferences}
+        imageUrl={imageUrl}
+        errorText={errorText}
+        autoPrint={autoPrint}
+        includeTranscribeStep={includeTranscribeStep}
+        isMobile={isMobile}
+        onClose={handleCloseDialog}
+      />
+      <ConfigDialog open={configOpen} runtimeConfig={runtimeConfig} onClose={() => setConfigOpen(false)} />
       {isMobile && (
-        <Dialog
+        <HistoryDialog
           open={historyOpen}
-          fullScreen
+          items={printableHistory}
           onClose={() => setHistoryOpen(false)}
-          PaperProps={{ sx: { bgcolor: 'background.default' } }}
-        >
-          <DialogContent dividers sx={{ bgcolor: 'background.default' }}>
-            <List dense>
-              {history.filter(item => !!item.imageUrl).map(item => (
-                <React.Fragment key={item.id}>
-                  <ListItem
-                    disableGutters
-                    alignItems="flex-start"
-                    onClick={() => {
-                      if (item.imageUrl) {
-                        setSelected(item);
-                        setHistoryOpen(false);
-                      }
-                    }}
-                    sx={{ cursor: item.imageUrl ? 'pointer' : 'default', px: 1 }}
-                  >
-                    <ListItemText
-                      primaryTypographyProps={{ variant: 'subtitle1' }}
-                      secondaryTypographyProps={{ component: 'div' }}
-                      primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: 1, gap: 1 }}>
-                          <span>{new Date(item.createdAt).toLocaleString()}</span>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            {(item.prompt || item.improvedPrompt) && (
-                              <Tooltip title="Prompt" arrow>
-                                <IconButton
-                                  edge="end"
-                                  size="small"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setPromptInfoItem(item);
-                                  }}
-                                  sx={{ p: 0.25, bgcolor: 'common.white', color: 'info.main', '&:hover': { bgcolor: 'grey.100' } }}
-                                  aria-label="Prompt"
-                                >
-                                  <InfoOutlinedIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                            <Tooltip title="Usuń kolorowankę">
-                              <IconButton
-                                edge="end"
-                                size="small"
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  try {
-                                    await api.remove(item.id);
-                                    if (selected?.id === item.id) setSelected(null);
-                                    await refreshHistory();
-                                  } catch (err) {
-                                    console.error('Delete failed:', err);
-                                    setStatus('error');
-                                  }
-                                }}
-                                sx={{ p: 0.25, bgcolor: 'common.white', color: 'error.main', '&:hover': { bgcolor: 'grey.100' } }}
-                                aria-label="Usuń"
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                        </Box>
-                      }
-                      secondary={
-                        <>
-                          {item.imageUrl && (
-                            <Box sx={{ mt: 1, borderRadius: 2, border: 1, borderColor: 'divider', overflow: 'hidden', transition: 'transform .2s ease, box-shadow .2s ease', '&:hover': { transform: 'scale(1.02) rotate(-0.2deg)', boxShadow: '0 10px 24px rgba(0,0,0,0.10)' } }}>
-                              <Box component="img" src={item.imageUrl} alt="podgląd" loading="lazy" decoding="async" sx={{ width: '100%', height: 'auto', display: 'block' }} />
-                            </Box>
-                          )}
-                        </>
-                      }
-                    />
-                  </ListItem>
-                  <Divider component="li" />
-                </React.Fragment>
-              ))}
-            </List>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setHistoryOpen(false)} startIcon={<CloseIcon />}>Zamknij</Button>
-          </DialogActions>
-        </Dialog>
+          onSelect={(item) => item.imageUrl && setSelected(item)}
+          onShowPrompt={setPromptInfoItem}
+          onDelete={handleDeleteHistoryItem}
+        />
       )}
-      {/* Prompt details modal */}
-      <Dialog open={!!promptInfoItem} onClose={() => setPromptInfoItem(null)} maxWidth="md" fullWidth>
-        <DialogTitle>Prompt</DialogTitle>
-        <DialogContent dividers>
-          {promptInfoItem && (
-            <Stack spacing={2}>
-              {promptInfoItem.prompt && (
-                <Box>
-                  <Typography variant="subtitle2" gutterBottom>Podstawowy prompt</Typography>
-                  <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                    {promptInfoItem.prompt}
-                  </Box>
-                </Box>
-              )}
-              {promptInfoItem.improvedPrompt && (
-                <Box>
-                  <Typography variant="subtitle2" gutterBottom>Ulepszony prompt</Typography>
-                  <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                    {promptInfoItem.improvedPrompt}
-                  </Box>
-                </Box>
-              )}
-              {promptInfoItem.references && promptInfoItem.references.length > 0 && (
-                <Box>
-                  <Typography variant="subtitle2" gutterBottom>Referencje</Typography>
-                  <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                    {promptInfoItem.references.map(stripExtension).join(', ')}
-                  </Box>
-                </Box>
-              )}
-            </Stack>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPromptInfoItem(null)} startIcon={<CloseIcon />}>Zamknij</Button>
-        </DialogActions>
-      </Dialog>
-      {/* Kid-friendly assistant */}
+      <PromptDetailsDialog item={promptInfoItem} open={!!promptInfoItem} onClose={() => setPromptInfoItem(null)} />
       <Mascot status={status} enabled={tipsEnabled} onToggle={setTipsEnabled} />
     </Box>
   );
