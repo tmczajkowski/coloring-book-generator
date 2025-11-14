@@ -2,8 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { saveImageBuffer, createSession, getSessionDir, readMeta, updateMeta } from '../services/storage.js';
 import { generateImage, generateImageWithReferences } from '../services/gemini.js';
 import { logger } from '../utils/logger.js';
-import sharp from 'sharp';
-import { EXT_JPG, FILE_IMAGE_JPG, IMAGE_A4_HEIGHT, IMAGE_A4_WIDTH } from '../constants.js';
+import { EXT_PNG, FILE_IMAGE_PNG } from '../constants.js';
 import fs from 'fs';
 import path from 'path';
 import { isValidId } from '../utils/validation.js';
@@ -55,15 +54,9 @@ generateRouter.post('/', async (req: Request, res: Response) => {
         pngBuffer = await generateImage(prompt);
       }
       
-      const source = pngBuffer;
-      const jpg = await sharp(source)
-        .resize(IMAGE_A4_WIDTH, IMAGE_A4_HEIGHT, { fit: 'contain', background: { r: 255, g: 255, b: 255 } })
-        .flatten({ background: { r: 255, g: 255, b: 255 } })
-        .jpeg({ quality: 95 })
-        .toBuffer();
-      const imgPath = await saveImageBuffer(id, jpg, EXT_JPG);
+      const imgPath = await saveImageBuffer(id, pngBuffer, EXT_PNG);
       logger.info('Generation: image saved', { id, path: imgPath });
-      res.json({ imageUrl: `/files/${id}/${FILE_IMAGE_JPG}`, thumbUrl: `/files/${id}/${FILE_IMAGE_JPG}`, path: imgPath });
+      res.json({ imageUrl: `/files/${id}/${FILE_IMAGE_PNG}`, thumbUrl: `/files/${id}/${FILE_IMAGE_PNG}`, path: imgPath });
     } catch (e: any) {
       const msg = String(e?.message || e);
       const normalized = msg.toLowerCase();
