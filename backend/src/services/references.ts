@@ -12,12 +12,9 @@ const referenceSchema = z.object({
 });
 type ReferenceSchemaType = z.infer<typeof referenceSchema>;
 
-const buildReferenceSystemMessage = () =>
-  'You are a reference selector. Respond only with a JSON object that strictly follows the provided schema ({ references: string[] }) and nothing else. Do not explain anything, do not add prose, and do not hallucinate values.';
-
 const buildReferenceUserMessage = (prompt: string, files: string[]) => {
   const list = files.length ? files.join(', ') : 'brak';
-  const basePrompt = config.promptDetectReferences || constants.PROMPT_DETECT_REFERENCES;
+  const basePrompt = config.promptDetectReferences;
   return `${basePrompt}. Prompt: '${prompt}'. Files: ${list}.`;
 };
 
@@ -56,7 +53,6 @@ export const detectReferences = async (userPrompt: string): Promise<ReferenceDet
       model: config.textModel,
       temperature: 0,
       input: [
-        { role: 'system', content: buildReferenceSystemMessage() },
         { role: 'user', content: buildReferenceUserMessage(userPrompt, available) },
       ],
       text: {
