@@ -110,6 +110,12 @@ const recordPulse = keyframes`
   100% { box-shadow: 0 0 0 0 rgba(239,71,111, 0); transform: scale(1); }
 `;
 
+const recordPulseSuccess = keyframes`
+  0% { box-shadow: 0 0 0 0 rgba(16,185,129, 0.55); transform: scale(1); }
+  60% { box-shadow: 0 0 0 12px rgba(16,185,129, 0); transform: scale(1.03); }
+  100% { box-shadow: 0 0 0 0 rgba(16,185,129, 0); transform: scale(1); }
+`;
+
 const wave = keyframes`
   0% { transform: scaleY(0.4); }
   50% { transform: scaleY(1); }
@@ -204,112 +210,115 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
 
   const handleIdeaMouseEnter = () => setOrbitPaused(true);
   const handleIdeaMouseLeave = () => setOrbitPaused(false);
+  const fabDisabled = status !== 'recording' && !canRecord;
 
   return (
     <Stack spacing={2} alignItems="center" sx={{ width: '100%', maxWidth: { xs: 420, sm: 640 }, mx: 'auto' }}>
-      <Stack spacing={0} sx={{ width: '100%', maxWidth: '100%' }}>
-        <Box
-          sx={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: { xs: 1, sm: 1.5 },
-            bgcolor: (theme) => theme.palette.background.paper,
-            opacity: 0.8,
-            borderRadius: 3,
-            px: { xs: 1, sm: 1.5 },
-            py: { xs: 0.75, sm: 1 },
-            boxShadow: 4,
-            width: 'fit-content',
-            maxWidth: '100%',
-            mx: 'auto',
-            position: 'relative',
-            zIndex: 2,
-          }}
-        >
-          <Tooltip title={landscapeMode ? 'Orientacja pozioma' : 'Orientacja pionowa'} arrow>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              {landscapeMode ? <CropLandscapeIcon color="primary" /> : <CropPortraitIcon color="action" />}
-              <Switch
-                size="small"
-                checked={landscapeMode}
-                onChange={(e) => onLandscapeChange(e.target.checked)}
-                color="primary"
-                inputProps={{ 'aria-label': 'Orientacja pozioma' }}
-              />
-            </Box>
-          </Tooltip>
-          <Tooltip title={autoPrint ? 'Automatyczne drukowanie włączone' : 'Kolorowanki nie będą drukowane automatycznie'} arrow>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <PrintIcon color={autoPrint ? 'primary' : 'action'} />
-              <Switch
-                size="small"
-                checked={autoPrint}
-                onChange={(e) => onAutoPrintChange(e.target.checked)}
-                color="primary"
-                inputProps={{ 'aria-label': 'Automatyczne drukowanie' }}
-              />
-            </Box>
-          </Tooltip>
-          <Tooltip title={improveEnabled ? 'Ulepszanie promptu włączone' : 'Wysyłaj oryginalny prompt'} arrow>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <AutoAwesomeIcon color={improveEnabled ? 'primary' : 'action'} />
-              <Switch
-                size="small"
-                checked={improveEnabled}
-                onChange={(e) => onImproveChange(e.target.checked)}
-                color="primary"
-                inputProps={{ 'aria-label': 'Ulepszanie promptu' }}
-              />
-            </Box>
-          </Tooltip>
-        </Box>
-        <Box
-          sx={{
-            mt: '16px',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            bgcolor: (theme) => theme.palette.background.paper,
-            opacity: 0.8,
-            borderRadius: 3,
-            px: { xs: 0.75, sm: 1 },
-            py: { xs: 0.5, sm: 0.75 },
-            boxShadow: 4,
-            width: 'fit-content',
-            mx: 'auto',
-            position: 'relative',
-            zIndex: 2,
-            height: { xs: 40, sm: 40 },
-          }}
-        >
-          <Tooltip title="Odśwież sugestie" arrow>
-            <Button
-              variant="contained"
-              onClick={refreshIdeas}
-              aria-label="Generuj nowe sugestie"
-              sx={{
-                minWidth: 0,
-                width: 100,
-                height: { xs: 32, sm: 36 },
-                borderRadius: 3,
-                fontSize: { xs: 18, sm: 22 },
-                padding: 0,
-                bgcolor: 'common.white',
-                color: 'text.primary',
-                boxShadow: 'none',
-                '&:hover': {
-                  bgcolor: 'grey.100',
+      {status !== 'recording' && (
+        <Stack spacing={0} sx={{ width: '100%', maxWidth: '100%' }}>
+          <Box
+            sx={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: { xs: 1, sm: 1.5 },
+              bgcolor: (theme) => theme.palette.background.paper,
+              opacity: 0.8,
+              borderRadius: 3,
+              px: { xs: 1, sm: 1.5 },
+              py: { xs: 0.75, sm: 1 },
+              boxShadow: 4,
+              width: 'fit-content',
+              maxWidth: '100%',
+              mx: 'auto',
+              position: 'relative',
+              zIndex: 2,
+            }}
+          >
+            <Tooltip title={landscapeMode ? 'Orientacja pozioma' : 'Orientacja pionowa'} arrow>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                {landscapeMode ? <CropLandscapeIcon color="primary" /> : <CropPortraitIcon color="action" />}
+                <Switch
+                  size="small"
+                  checked={landscapeMode}
+                  onChange={(e) => onLandscapeChange(e.target.checked)}
+                  color="primary"
+                  inputProps={{ 'aria-label': 'Orientacja pozioma' }}
+                />
+              </Box>
+            </Tooltip>
+            <Tooltip title={autoPrint ? 'Automatyczne drukowanie włączone' : 'Kolorowanki nie będą drukowane automatycznie'} arrow>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <PrintIcon color={autoPrint ? 'primary' : 'action'} />
+                <Switch
+                  size="small"
+                  checked={autoPrint}
+                  onChange={(e) => onAutoPrintChange(e.target.checked)}
+                  color="primary"
+                  inputProps={{ 'aria-label': 'Automatyczne drukowanie' }}
+                />
+              </Box>
+            </Tooltip>
+            <Tooltip title={improveEnabled ? 'Ulepszanie promptu włączone' : 'Wysyłaj oryginalny prompt'} arrow>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <AutoAwesomeIcon color={improveEnabled ? 'primary' : 'action'} />
+                <Switch
+                  size="small"
+                  checked={improveEnabled}
+                  onChange={(e) => onImproveChange(e.target.checked)}
+                  color="primary"
+                  inputProps={{ 'aria-label': 'Ulepszanie promptu' }}
+                />
+              </Box>
+            </Tooltip>
+          </Box>
+          <Box
+            sx={{
+              mt: '16px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              bgcolor: (theme) => theme.palette.background.paper,
+              opacity: 0.8,
+              borderRadius: 3,
+              px: { xs: 0.75, sm: 1 },
+              py: { xs: 0.5, sm: 0.75 },
+              boxShadow: 4,
+              width: 'fit-content',
+              mx: 'auto',
+              position: 'relative',
+              zIndex: 2,
+              height: { xs: 40, sm: 40 },
+            }}
+          >
+            <Tooltip title="Odśwież sugestie" arrow>
+              <Button
+                variant="contained"
+                onClick={refreshIdeas}
+                aria-label="Generuj nowe sugestie"
+                sx={{
+                  minWidth: 0,
+                  width: 100,
+                  height: { xs: 32, sm: 36 },
+                  borderRadius: 3,
+                  fontSize: { xs: 18, sm: 22 },
+                  padding: 0,
+                  bgcolor: 'common.white',
+                  color: 'text.primary',
                   boxShadow: 'none',
-                },
-              }}
-            >
-              🎲
-            </Button>
-          </Tooltip>
-        </Box>
-      </Stack>
+                  '&:hover': {
+                    bgcolor: 'grey.100',
+                    boxShadow: 'none',
+                  },
+                }}
+              >
+                🎲
+              </Button>
+            </Tooltip>
+          </Box>
+        </Stack>
+      )}
       <Box
         sx={{
           position: 'relative',
@@ -323,30 +332,84 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
           mt: ringClearance,
         }}
       >
-        <Fab
-          aria-label="Nagraj prompt głosowy"
-          color="error"
-          size="large"
-          sx={{
-            width: { xs: 96, sm: 168 },
-            height: { xs: 96, sm: 168 },
-            animation:
-              status === 'recording'
-                ? `${recordPulse} 1.4s ease-in-out infinite`
-                : canRecord
-                  ? `${pulse} 1.8s ease-in-out infinite`
-                  : 'none',
-            '&.Mui-disabled': {
-              bgcolor: 'error.main',
-              color: 'common.white',
-              opacity: 1,
-            },
-          }}
-          disabled={!canRecord}
-          onClick={canRecord ? onStartRecording : undefined}
-        >
-          <MicIcon sx={{ fontSize: { xs: 36, sm: 56 } }} />
-        </Fab>
+        <Box sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Fab
+            aria-label={status === 'recording' ? 'Generuj kolorowanke' : 'Nagraj prompt glosowy'}
+            color={status === 'recording' ? 'success' : 'error'}
+            size="large"
+            sx={{
+              width: { xs: 96, sm: 168 },
+              height: { xs: 96, sm: 168 },
+              animation:
+                status === 'recording'
+                  ? `${recordPulseSuccess} 1.4s ease-in-out infinite`
+                  : canRecord
+                    ? `${pulse} 1.8s ease-in-out infinite`
+                    : 'none',
+              '&.Mui-disabled': {
+                bgcolor: status === 'recording' ? 'success.main' : 'error.main',
+                color: 'common.white',
+                opacity: 1,
+              },
+              '& svg': {
+                fontSize: { xs: 36, sm: 56 },
+              },
+              '&:hover': {
+                bgcolor: status === 'recording' ? 'success.dark' : 'error.dark',
+              },
+              '&:not(.Mui-disabled)': {
+                cursor: 'pointer',
+              },
+            }}
+            disabled={fabDisabled}
+            onClick={status === 'recording' ? onStopRecording : canRecord ? onStartRecording : undefined}
+          >
+            {status === 'recording' ? <AutoAwesomeIcon sx={{ color: 'common.white' }} /> : <MicIcon />}
+          </Fab>
+          {status === 'recording' && (
+            <Stack
+              direction="column"
+              spacing={0.5}
+              alignItems="center"
+              sx={{
+                position: 'absolute',
+                top: 'calc(100% + 10px)',
+                left: '50%',
+                transform: 'translateX(-50%)',
+              }}
+            >
+              <Box
+                aria-label="Nagrywanie – wizualizacja dźwięku"
+                sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.6, height: 32 }}
+              >
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <Box
+                    // eslint-disable-next-line react/no-array-index-key
+                    key={i}
+                    sx={{
+                      width: { xs: 4, sm: 6 },
+                      height: '100%',
+                      transformOrigin: 'center bottom',
+                      backgroundColor: 'error.main',
+                      borderRadius: 1,
+                      animation: `${wave} ${1.1 + (i % 5) * 0.12}s ease-in-out ${i * 0.08}s infinite`,
+                      boxShadow: '0 2px 8px rgba(239,71,111,0.35)',
+                    }}
+                  />
+                ))}
+              </Box>
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<CloseIcon />}
+                onClick={onCancelRecording}
+                sx={{ width: { xs: 160, sm: 240 }, borderRadius: 3 }}
+              >
+                Anuluj
+              </Button>
+            </Stack>
+          )}
+        </Box>
         {ideasVisible && status === 'idle' && (
           <>
             {ideas.map((it, index) => {
@@ -406,35 +469,6 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
             sx={{ animation: `${wiggle} 2.4s ease-in-out infinite`, transformOrigin: 'bottom center', opacity: 0.85 }}
           />
         </Box>
-      )}
-      {status === 'recording' && (
-        <Box aria-label="Nagrywanie – wizualizacja dźwięku" sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.6, height: 40 }}>
-          {Array.from({ length: 12 }).map((_, i) => (
-            <Box
-              // eslint-disable-next-line react/no-array-index-key
-              key={i}
-              sx={{
-                width: { xs: 4, sm: 6 },
-                height: '100%',
-                transformOrigin: 'center bottom',
-                backgroundColor: 'error.main',
-                borderRadius: 1,
-                animation: `${wave} ${1.1 + (i % 5) * 0.12}s ease-in-out ${i * 0.08}s infinite`,
-                boxShadow: '0 2px 8px rgba(239,71,111,0.35)',
-              }}
-            />
-          ))}
-        </Box>
-      )}
-      {status === 'recording' && (
-        <Stack direction="row" spacing={1}>
-          <Button variant="contained" color="success" onClick={onStopRecording} startIcon={<AutoAwesomeIcon />}>
-            Generuj
-          </Button>
-          <Button variant="contained" color="error" onClick={onCancelRecording} startIcon={<CloseIcon />}>
-            Anuluj
-          </Button>
-        </Stack>
       )}
     </Stack>
   );
