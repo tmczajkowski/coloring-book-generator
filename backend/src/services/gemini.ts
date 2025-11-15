@@ -99,7 +99,9 @@ const generateWithGemini = async (subject: string, references: string[] | undefi
     aspectRatio: effectiveAspect || 'default',
   });
 
-  const generationConfig: Record<string, unknown> = {};
+  const generationConfig: Record<string, any> = {
+    responseModalities: ['Image'],
+  };
   if (effectiveAspect) {
     generationConfig.imageConfig = { aspectRatio: effectiveAspect };
   }
