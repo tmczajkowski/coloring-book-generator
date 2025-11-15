@@ -129,10 +129,18 @@ const wiggle = keyframes`
   100% { transform: rotate(0deg) translateY(0); }
 `;
 
-const sparkle = keyframes`
-  0% { opacity: 0; transform: scale(0) rotate(0deg); }
-  50% { opacity: 1; transform: scale(1) rotate(180deg); }
-  100% { opacity: 0; transform: scale(0) rotate(360deg); }
+const particleOut = keyframes`
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--tx), var(--ty)) scale(0.3);
+  }
 `;
 
 const WAVEFORM_GAP = 0.6;
@@ -595,27 +603,35 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                       '&:active': { transform: 'translate(-50%, -50%) scale(0.96)' },
                     }}
                   >
-                    {/* Sparkle effects on hover */}
+                    {/* Radial particles flying out from center */}
                     {isHovered && (
                       <>
-                        {[...Array(6)].map((_, i) => (
-                          <Box
-                            key={i}
-                            sx={{
-                              position: 'absolute',
-                              width: 8,
-                              height: 8,
-                              borderRadius: '50%',
-                              bgcolor: '#FFF',
-                              boxShadow: '0 0 8px #FFB703',
-                              top: `${15 + Math.random() * 70}%`,
-                              left: `${15 + Math.random() * 70}%`,
-                              animation: `${sparkle} 0.8s ease-out infinite`,
-                              animationDelay: `${i * 0.15}s`,
-                              pointerEvents: 'none',
-                            }}
-                          />
-                        ))}
+                        {[...Array(8)].map((_, i) => {
+                          const angle = (i / 8) * Math.PI * 2;
+                          const distance = 45;
+                          const tx = Math.cos(angle) * distance;
+                          const ty = Math.sin(angle) * distance;
+
+                          return (
+                            <Box
+                              key={i}
+                              sx={{
+                                position: 'absolute',
+                                width: 8,
+                                height: 8,
+                                borderRadius: '50%',
+                                bgcolor: '#FFF',
+                                top: '50%',
+                                left: '50%',
+                                '--tx': `${tx}px`,
+                                '--ty': `${ty}px`,
+                                animation: `${particleOut} 1.2s ease-out infinite`,
+                                animationDelay: `${i * 0.12}s`,
+                                pointerEvents: 'none',
+                              }}
+                            />
+                          );
+                        })}
                       </>
                     )}
                     <Box
