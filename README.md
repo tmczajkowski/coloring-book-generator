@@ -3,10 +3,10 @@
 Aplikacja do generowania, przeglądania i drukowania kolorowanek na podstawie promptów głosowych lub tekstowych.
 
 ### Desktop:
-![](https://github.com/Patresss/coloring-book-generator/blob/master/screenshots/desktop.png?raw=true)
+![](https://github.com/Patresss/coloring-book-generator/blob/main/screenshots/desktop.png?raw=true)
 
 ### Mobile:
-![](https://github.com/Patresss/coloring-book-generator/blob/master/screenshots/mobile.png?raw=true)
+![](https://github.com/Patresss/coloring-book-generator/blob/main/screenshots/mobile.png?raw=true)
 
 ## 🎨 AI, które rozwiązuje realne problemy... czyli kolorowanki dla dzieci!
 
