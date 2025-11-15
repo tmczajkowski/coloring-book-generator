@@ -89,14 +89,11 @@ const ideaCatalog = [
   { icon: '🏀', label: 'Sport', prompt: 'Piłki sportowe: koszykówka i piłka nożna' },
   { icon: '🎸', label: 'Muzyka', prompt: 'Instrumenty muzyczne' },
   { icon: '🧱', label: 'Klocki', prompt: 'Wieża z klocków' },
-  { icon: '🎲', label: 'Losowa kolorowanka — zaskocz mnie', random: true },
 ] as const;
 
 const buildIdeaSet = () => {
-  const pool = ideaCatalog.filter((it) => !(it as any).random);
-  const randomItem = ideaCatalog.find((it) => (it as any).random)!;
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  return [...shuffled.slice(0, 9), randomItem];
+  const shuffled = [...ideaCatalog].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, 10);
 };
 
 const pulse = keyframes`
@@ -322,9 +319,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                 <Tooltip title={it.label} arrow key={`${it.icon}-${index}`}>
                   <Box
                     onClick={() => {
-                      const prompt = (it as any).random
-                        ? 'Wymyśl dla dziecka kreatywną scenę — losowy temat'
-                        : (it as any).prompt;
+                      const prompt = it.prompt;
                       onIdeaSelect(prompt);
                     }}
                     role="button"
