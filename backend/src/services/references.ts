@@ -15,7 +15,9 @@ type ReferenceSchemaType = z.infer<typeof referenceSchema>;
 const buildReferenceUserMessage = (prompt: string, files: string[]) => {
   const list = files.length ? files.join(', ') : 'brak';
   const basePrompt = config.promptDetectReferences;
-  return `${basePrompt}. Prompt: '${prompt}'. Files: ${list}.`;
+  const promptToSent = `${basePrompt}.  Available Files: '${list}'. Prompt z ktorego wykryjesz referencje (postacie): '${prompt}'.`
+  logger.info('References: Sending prompt', { promptToSent });
+  return promptToSent;
 };
 
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
@@ -47,11 +49,10 @@ export const detectReferences = async (userPrompt: string): Promise<ReferenceDet
   if (available.length === 0) return { references: [], available };
 
   const client = createOpenAIClient();
-  logger.info('References: detect start', { count: available.length });
+  logger.info('References: detect start avaiable', { count: available.length });
   try {
     const response = await client.responses.parse({
       model: config.textModel,
-      temperature: 0,
       input: [
         { role: 'user', content: buildReferenceUserMessage(userPrompt, available) },
       ],
