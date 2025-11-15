@@ -5,8 +5,10 @@ export const JOB_NAME = 'Kolorowanka';
 export const IMAGE_BASENAME = 'image';
 export const EXT_JPG = 'jpg';
 export const EXT_PNG = 'png';
+export const EXT_SVG = 'svg';
 export const FILE_IMAGE_JPG = `${IMAGE_BASENAME}.${EXT_JPG}`;
 export const FILE_IMAGE_PNG = `${IMAGE_BASENAME}.${EXT_PNG}`;
+export const FILE_IMAGE_SVG = `${IMAGE_BASENAME}.${EXT_SVG}`;
 export const IMAGE_A4_WIDTH = 2480; // ~210mm @ 300 DPI
 export const IMAGE_A4_HEIGHT = 3508; // ~297mm @ 300 DPI
 
