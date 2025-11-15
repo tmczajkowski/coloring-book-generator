@@ -34,6 +34,71 @@ type RecordingControlsProps = {
   onIdeaSelect: (prompt: string) => void;
 };
 
+const ideaCatalog = [
+  { icon: '🌈', label: 'Tęcze', prompt: 'Tęcze z 7 paskami na kazdy kolor' },
+  { icon: '🦄', label: 'Jednorożce', prompt: 'Jednorożce w magicznym lesie' },
+  { icon: '🦁', label: 'Zwierzęta w zoo', prompt: 'Lew, żyrafa i słoń w zoo' },
+  { icon: '🐶', label: 'Pieski', prompt: 'Pieski bawiące się piłką' },
+  { icon: '🐱', label: 'Kotki', prompt: 'Kotki śpiące na poduszkach' },
+  { icon: '👗', label: 'Lalki', prompt: 'Lalki w stylu Barbie w modnych strojach i z długimi włosami' },
+  { icon: '🚗', label: 'Samochody', prompt: 'Samochody wyścigowe na torze' },
+  { icon: '🚀', label: 'Rakiety', prompt: 'Rakiety lecące w kosmos, planety i gwiazdy' },
+  { icon: '🦸‍♀️', label: 'Superbohaterowie', prompt: 'Superbohaterowie w akcji w dynamicznych pozach' },
+  { icon: '🧚‍♀️', label: 'Wróżki', prompt: 'Bajkowe wróżki z różdżkami' },
+  { icon: '🐯', label: 'Tygryski', prompt: 'Przyjazne tygryski w dżungli' },
+  { icon: '🦓', label: 'Zebry', prompt: 'Zebra na sawannie' },
+  { icon: '🦒', label: 'Żyrafy', prompt: 'Żyrafa pod drzewem akacji' },
+  { icon: '🐘', label: 'Słonie', prompt: 'Słoń z trąbą unoszącą wodę' },
+  { icon: '🐵', label: 'Małpki', prompt: 'Wesołe małpki na lianach' },
+  { icon: '🐸', label: 'Żabki', prompt: 'Żabka na liściu nenufaru' },
+  { icon: '🐢', label: 'Żółwie', prompt: 'Żółw na plaży' },
+  { icon: '🐳', label: 'Ocean', prompt: 'Podwodny świat z wielorybem i rybkami' },
+  { icon: '🦕', label: 'Dinozaury', prompt: 'Przyjazne dinozaury w parku' },
+  { icon: '🏰', label: 'Zamki', prompt: 'Bajkowy zamek na wzgórzu' },
+  { icon: '👸', label: 'Księżniczki', prompt: 'Księżniczka w sukni balowej' },
+  { icon: '🤴', label: 'Książęta', prompt: 'Książę z mieczem, uśmiechnięty' },
+  { icon: '🪖', label: 'Żołnierzyki', prompt: 'Zabawkowe żołnierzyki na paradzie z flagami' },
+  { icon: '🐉', label: 'Smoki', prompt: 'Przyjazny smok nad wioską' },
+  { icon: '🧜‍♀️', label: 'Syrenki', prompt: 'Syrenka w morzu, muszelki i rybki' },
+  { icon: '🦋', label: 'Motyle', prompt: 'Motyle nad łąką' },
+  { icon: '🌸', label: 'Kwiaty', prompt: 'Różne kwiaty w ogrodzie' },
+  { icon: '🌵', label: 'Pustynia', prompt: 'Kaktusy i zachód słońca' },
+  { icon: '🌲', label: 'Las', prompt: 'Leśne zwierzątka i drzewa' },
+  { icon: '🏖️', label: 'Plaża', prompt: 'Plaża z zamkiem z piasku, wiaderkiem i łopatką' },
+  { icon: '🏜️', label: 'Kaniony', prompt: 'Skaliste kaniony i słońce' },
+  { icon: '🏞️', label: 'Góry', prompt: 'Góry, rzeka i sosny' },
+  { icon: '🚌', label: 'Autobus', prompt: 'Wesoły szkolny autobus' },
+  { icon: '🚒', label: 'Straż', prompt: 'Wóz strażacki w akcji (bez ognia)' },
+  { icon: '🚑', label: 'Karetka', prompt: 'Karetka z uśmiechniętym kierowcą' },
+  { icon: '✈️', label: 'Samoloty', prompt: 'Samolot nad chmurami' },
+  { icon: '🚂', label: 'Pociągi', prompt: 'Lokomotywa na torach' },
+  { icon: '🚲', label: 'Rowerki', prompt: 'Dziecięcy rowerek w parku' },
+  { icon: '🛵', label: 'Skutery', prompt: 'Skuter w mieście' },
+  { icon: '🧩', label: 'Kształty', prompt: 'Duże proste kształty geometryczne' },
+  { icon: '🎈', label: 'Balony', prompt: 'Mnóstwo balonów nad miasteczkiem' },
+  { icon: '🎠', label: 'Karuzela', prompt: 'Karuzela z konikami' },
+  { icon: '🎪', label: 'Cyrk', prompt: 'Cyrkowy namiot i przyjazny klaun' },
+  { icon: '🎃', label: 'Dynia', prompt: 'Uśmiechnięte dynie i jesienne liście' },
+  { icon: '❄️', label: 'Zima', prompt: 'Bałwan i śnieżynki' },
+  { icon: '🌞', label: 'Lato', prompt: 'Słońce, plaża i lody' },
+  { icon: '🌧️', label: 'Deszcz', prompt: 'Parasolka i kałuże' },
+  { icon: '🪐', label: 'Planety', prompt: 'Układ słoneczny: planety i gwiazdy' },
+  { icon: '🧁', label: 'Słodkości', prompt: 'Babeczki i cukierki' },
+  { icon: '🍕', label: 'Pizza', prompt: 'Wesoła pizza z uśmiechem' },
+  { icon: '🍦', label: 'Lody', prompt: 'Pucharek lodów z posypką' },
+  { icon: '🏀', label: 'Sport', prompt: 'Piłki sportowe: koszykówka i piłka nożna' },
+  { icon: '🎸', label: 'Muzyka', prompt: 'Instrumenty muzyczne' },
+  { icon: '🧱', label: 'Klocki', prompt: 'Wieża z klocków' },
+  { icon: '🎲', label: 'Losowa kolorowanka — zaskocz mnie', random: true },
+] as const;
+
+const buildIdeaSet = () => {
+  const pool = ideaCatalog.filter((it) => !(it as any).random);
+  const randomItem = ideaCatalog.find((it) => (it as any).random)!;
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  return [...shuffled.slice(0, 9), randomItem];
+};
+
 const pulse = keyframes`
   0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,71,111, 0.4); }
   70% { transform: scale(1.04); box-shadow: 0 0 0 18px rgba(239,71,111, 0); }
@@ -104,126 +169,112 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
   const ringPadding = isMobile ? 0 : 80;
   const ringBoxSize = ring.radius * 2 + ring.item + ringPadding;
   const ringBoxSizePx = `${ringBoxSize}px`;
-  const ideaCatalog = [
-    { icon: '🌈', label: 'Tęcze', prompt: 'Tęcze z 7 paskami na kazdy kolor' },
-    { icon: '🦄', label: 'Jednorożce', prompt: 'Jednorożce w magicznym lesie' },
-    { icon: '🦁', label: 'Zwierzęta w zoo', prompt: 'Lew, żyrafa i słoń w zoo' },
-    { icon: '🐶', label: 'Pieski', prompt: 'Pieski bawiące się piłką' },
-    { icon: '🐱', label: 'Kotki', prompt: 'Kotki śpiące na poduszkach' },
-    { icon: '👗', label: 'Lalki', prompt: 'Lalki w stylu Barbie w modnych strojach i z długimi włosami' },
-    { icon: '🚗', label: 'Samochody', prompt: 'Samochody wyścigowe na torze' },
-    { icon: '🚀', label: 'Rakiety', prompt: 'Rakiety lecące w kosmos, planety i gwiazdy' },
-    { icon: '🦸‍♀️', label: 'Superbohaterowie', prompt: 'Superbohaterowie w akcji w dynamicznych pozach' },
-    { icon: '🧚‍♀️', label: 'Wróżki', prompt: 'Bajkowe wróżki z różdżkami' },
-    { icon: '🐯', label: 'Tygryski', prompt: 'Przyjazne tygryski w dżungli' },
-    { icon: '🦓', label: 'Zebry', prompt: 'Zebra na sawannie' },
-    { icon: '🦒', label: 'Żyrafy', prompt: 'Żyrafa pod drzewem akacji' },
-    { icon: '🐘', label: 'Słonie', prompt: 'Słoń z trąbą unoszącą wodę' },
-    { icon: '🐵', label: 'Małpki', prompt: 'Wesołe małpki na lianach' },
-    { icon: '🐸', label: 'Żabki', prompt: 'Żabka na liściu nenufaru' },
-    { icon: '🐢', label: 'Żółwie', prompt: 'Żółw na plaży' },
-    { icon: '🐳', label: 'Ocean', prompt: 'Podwodny świat z wielorybem i rybkami' },
-    { icon: '🦕', label: 'Dinozaury', prompt: 'Przyjazne dinozaury w parku' },
-    { icon: '🏰', label: 'Zamki', prompt: 'Bajkowy zamek na wzgórzu' },
-    { icon: '👸', label: 'Księżniczki', prompt: 'Księżniczka w sukni balowej' },
-    { icon: '🤴', label: 'Książęta', prompt: 'Książę z mieczem, uśmiechnięty' },
-    { icon: '🪖', label: 'Żołnierzyki', prompt: 'Zabawkowe żołnierzyki na paradzie z flagami' },
-    { icon: '🐉', label: 'Smoki', prompt: 'Przyjazny smok nad wioską' },
-    { icon: '🧜‍♀️', label: 'Syrenki', prompt: 'Syrenka w morzu, muszelki i rybki' },
-    { icon: '🦋', label: 'Motyle', prompt: 'Motyle nad łąką' },
-    { icon: '🌸', label: 'Kwiaty', prompt: 'Różne kwiaty w ogrodzie' },
-    { icon: '🌵', label: 'Pustynia', prompt: 'Kaktusy i zachód słońca' },
-    { icon: '🌲', label: 'Las', prompt: 'Leśne zwierzątka i drzewa' },
-    { icon: '🏖️', label: 'Plaża', prompt: 'Plaża z zamkiem z piasku, wiaderkiem i łopatką' },
-    { icon: '🏜️', label: 'Kaniony', prompt: 'Skaliste kaniony i słońce' },
-    { icon: '🏞️', label: 'Góry', prompt: 'Góry, rzeka i sosny' },
-    { icon: '🚌', label: 'Autobus', prompt: 'Wesoły szkolny autobus' },
-    { icon: '🚒', label: 'Straż', prompt: 'Wóz strażacki w akcji (bez ognia)' },
-    { icon: '🚑', label: 'Karetka', prompt: 'Karetka z uśmiechniętym kierowcą' },
-    { icon: '✈️', label: 'Samoloty', prompt: 'Samolot nad chmurami' },
-    { icon: '🚂', label: 'Pociągi', prompt: 'Lokomotywa na torach' },
-    { icon: '🚲', label: 'Rowerki', prompt: 'Dziecięcy rowerek w parku' },
-    { icon: '🛵', label: 'Skutery', prompt: 'Skuter w mieście' },
-    { icon: '🧩', label: 'Kształty', prompt: 'Duże proste kształty geometryczne' },
-    { icon: '🎈', label: 'Balony', prompt: 'Mnóstwo balonów nad miasteczkiem' },
-    { icon: '🎠', label: 'Karuzela', prompt: 'Karuzela z konikami' },
-    { icon: '🎪', label: 'Cyrk', prompt: 'Cyrkowy namiot i przyjazny klaun' },
-    { icon: '🎃', label: 'Dynia', prompt: 'Uśmiechnięte dynie i jesienne liście' },
-    { icon: '❄️', label: 'Zima', prompt: 'Bałwan i śnieżynki' },
-    { icon: '🌞', label: 'Lato', prompt: 'Słońce, plaża i lody' },
-    { icon: '🌧️', label: 'Deszcz', prompt: 'Parasolka i kałuże' },
-    { icon: '🪐', label: 'Planety', prompt: 'Układ słoneczny: planety i gwiazdy' },
-    { icon: '🧁', label: 'Słodkości', prompt: 'Babeczki i cukierki' },
-    { icon: '🍕', label: 'Pizza', prompt: 'Wesoła pizza z uśmiechem' },
-    { icon: '🍦', label: 'Lody', prompt: 'Pucharek lodów z posypką' },
-    { icon: '🏀', label: 'Sport', prompt: 'Piłki sportowe: koszykówka i piłka nożna' },
-    { icon: '🎸', label: 'Muzyka', prompt: 'Instrumenty muzyczne' },
-    { icon: '🧱', label: 'Klocki', prompt: 'Wieża z klocków' },
-    { icon: '🎲', label: 'Losowa kolorowanka — zaskocz mnie', random: true },
-  ] as const;
-
-  const pool = ideaCatalog.filter((it) => !(it as any).random);
-  const randomItem = ideaCatalog.find((it) => (it as any).random)!;
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  const ideas = [...shuffled.slice(0, 9), randomItem];
+  const [ideas, setIdeas] = React.useState(buildIdeaSet);
+  const refreshIdeas = React.useCallback(() => setIdeas(buildIdeaSet()), []);
 
   return (
     <Stack spacing={2} alignItems="center" sx={{ width: '100%', maxWidth: { xs: 420, sm: 640 }, mx: 'auto' }}>
-      <Box
-        sx={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: { xs: 1, sm: 1.5 },
-          bgcolor: (theme) => theme.palette.background.paper,
-          borderRadius: 3,
-          px: { xs: 1, sm: 1.5 },
-          py: { xs: 0.75, sm: 1 },
-          boxShadow: 4,
-          width: 'auto',
-          maxWidth: '100%',
-          position: 'relative',
-          zIndex: 2,
-        }}
-      >
-        <Tooltip title={landscapeMode ? 'Orientacja pozioma' : 'Orientacja pionowa'} arrow>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            {landscapeMode ? <CropLandscapeIcon color="primary" /> : <CropPortraitIcon color="action" />}
-            <Switch
-              size="small"
-              checked={landscapeMode}
-              onChange={(e) => onLandscapeChange(e.target.checked)}
-              color="primary"
-              inputProps={{ 'aria-label': 'Orientacja pozioma' }}
-            />
-          </Box>
-        </Tooltip>
-        <Tooltip title={autoPrint ? 'Automatyczne drukowanie włączone' : 'Kolorowanki nie będą drukowane automatycznie'} arrow>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <PrintIcon color={autoPrint ? 'primary' : 'action'} />
-            <Switch
-              size="small"
-              checked={autoPrint}
-              onChange={(e) => onAutoPrintChange(e.target.checked)}
-              color="primary"
-              inputProps={{ 'aria-label': 'Automatyczne drukowanie' }}
-            />
-          </Box>
-        </Tooltip>
-        <Tooltip title={improveEnabled ? 'Ulepszanie promptu włączone' : 'Wysyłaj oryginalny prompt'} arrow>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <AutoAwesomeIcon color={improveEnabled ? 'primary' : 'action'} />
-            <Switch
-              size="small"
-              checked={improveEnabled}
-              onChange={(e) => onImproveChange(e.target.checked)}
-              color="primary"
-              inputProps={{ 'aria-label': 'Ulepszanie promptu' }}
-            />
-          </Box>
-        </Tooltip>
-      </Box>
+      <Stack spacing={0} sx={{ width: '100%', maxWidth: '100%' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: { xs: 1, sm: 1.5 },
+            bgcolor: (theme) => theme.palette.background.paper,
+            borderRadius: 3,
+            px: { xs: 1, sm: 1.5 },
+            py: { xs: 0.75, sm: 1 },
+            boxShadow: 4,
+            width: 'fit-content',
+            maxWidth: '100%',
+            mx: 'auto',
+            position: 'relative',
+            zIndex: 2,
+          }}
+        >
+          <Tooltip title={landscapeMode ? 'Orientacja pozioma' : 'Orientacja pionowa'} arrow>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              {landscapeMode ? <CropLandscapeIcon color="primary" /> : <CropPortraitIcon color="action" />}
+              <Switch
+                size="small"
+                checked={landscapeMode}
+                onChange={(e) => onLandscapeChange(e.target.checked)}
+                color="primary"
+                inputProps={{ 'aria-label': 'Orientacja pozioma' }}
+              />
+            </Box>
+          </Tooltip>
+          <Tooltip title={autoPrint ? 'Automatyczne drukowanie włączone' : 'Kolorowanki nie będą drukowane automatycznie'} arrow>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <PrintIcon color={autoPrint ? 'primary' : 'action'} />
+              <Switch
+                size="small"
+                checked={autoPrint}
+                onChange={(e) => onAutoPrintChange(e.target.checked)}
+                color="primary"
+                inputProps={{ 'aria-label': 'Automatyczne drukowanie' }}
+              />
+            </Box>
+          </Tooltip>
+          <Tooltip title={improveEnabled ? 'Ulepszanie promptu włączone' : 'Wysyłaj oryginalny prompt'} arrow>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <AutoAwesomeIcon color={improveEnabled ? 'primary' : 'action'} />
+              <Switch
+                size="small"
+                checked={improveEnabled}
+                onChange={(e) => onImproveChange(e.target.checked)}
+                color="primary"
+                inputProps={{ 'aria-label': 'Ulepszanie promptu' }}
+              />
+            </Box>
+          </Tooltip>
+        </Box>
+        <Box
+          sx={{
+            mt: '16px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            bgcolor: (theme) => theme.palette.background.paper,
+            borderRadius: 3,
+            px: { xs: 0.75, sm: 1 },
+            py: { xs: 0.5, sm: 0.75 },
+            boxShadow: 4,
+            width: 'fit-content',
+            mx: 'auto',
+            position: 'relative',
+            zIndex: 2,
+            height: { xs: 40, sm: 40 },
+          }}
+        >
+          <Tooltip title="Odśwież sugestie" arrow>
+            <Button
+              variant="contained"
+              onClick={refreshIdeas}
+              aria-label="Generuj nowe sugestie"
+              sx={{
+                minWidth: 0,
+                width: 100,
+                height: { xs: 32, sm: 36 },
+                borderRadius: 3,
+                fontSize: { xs: 18, sm: 22 },
+                padding: 0,
+                bgcolor: 'common.white',
+                color: 'text.primary',
+                boxShadow: 'none',
+                '&:hover': {
+                  bgcolor: 'grey.100',
+                  boxShadow: 'none',
+                },
+              }}
+            >
+              🎲
+            </Button>
+          </Tooltip>
+        </Box>
+      </Stack>
       <Box
         sx={{
           position: 'relative',
