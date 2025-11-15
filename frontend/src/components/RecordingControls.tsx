@@ -91,6 +91,8 @@ const ideaCatalog = [
   { icon: '🧱', label: 'Klocki', prompt: 'Wieża z klocków' },
 ] as const;
 
+const ORBIT_SPEED = 0.2;
+
 const buildIdeaSet = () => {
   const shuffled = [...ideaCatalog].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, 10);
@@ -168,6 +170,40 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
   const ringBoxSizePx = `${ringBoxSize}px`;
   const [ideas, setIdeas] = React.useState(buildIdeaSet);
   const refreshIdeas = React.useCallback(() => setIdeas(buildIdeaSet()), []);
+  const [orbitAngle, setOrbitAngle] = React.useState(0);
+  const orbitFrameRef = React.useRef<number | null>(null);
+  const orbitLastTimestampRef = React.useRef<number | null>(null);
+  const [orbitPaused, setOrbitPaused] = React.useState(false);
+
+  React.useEffect(() => {
+    const cleanup = () => {
+      if (orbitFrameRef.current != null) {
+        cancelAnimationFrame(orbitFrameRef.current);
+        orbitFrameRef.current = null;
+      }
+      orbitLastTimestampRef.current = null;
+    };
+
+    if (orbitPaused) {
+      cleanup();
+      return cleanup;
+    }
+
+    const step = (time: number) => {
+      if (orbitLastTimestampRef.current != null) {
+        const delta = time - orbitLastTimestampRef.current;
+        setOrbitAngle((prev) => (prev + (delta / 1000) * ORBIT_SPEED) % (Math.PI * 2));
+      }
+      orbitLastTimestampRef.current = time;
+      orbitFrameRef.current = requestAnimationFrame(step);
+    };
+
+    orbitFrameRef.current = requestAnimationFrame(step);
+    return cleanup;
+  }, [orbitPaused]);
+
+  const handleIdeaMouseEnter = () => setOrbitPaused(true);
+  const handleIdeaMouseLeave = () => setOrbitPaused(false);
 
   return (
     <Stack spacing={2} alignItems="center" sx={{ width: '100%', maxWidth: { xs: 420, sm: 640 }, mx: 'auto' }}>
@@ -312,7 +348,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
         {ideasVisible && status === 'idle' && (
           <>
             {ideas.map((it, index) => {
-              const angle = (index / ideas.length) * Math.PI * 2;
+              const angle = (index / ideas.length) * Math.PI * 2 + orbitAngle;
               const x = Math.cos(angle) * ring.radius;
               const y = Math.sin(angle) * ring.radius;
               return (
@@ -322,6 +358,8 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                       const prompt = it.prompt;
                       onIdeaSelect(prompt);
                     }}
+                    onMouseEnter={handleIdeaMouseEnter}
+                    onMouseLeave={handleIdeaMouseLeave}
                     role="button"
                     aria-label={`Pomysł: ${it.label}`}
                     sx={{
@@ -349,21 +387,13 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                       '&:active': { transform: 'translate(-50%, -50%) scale(0.96)' },
                     }}
                   >
-                    <Box
-                      sx={{ fontSize: ring.emoji, lineHeight: 1, animation: 'slowSpinReverse 80s linear infinite' }}
-                      component="span"
-                    >
+                    <Box sx={{ fontSize: ring.emoji, lineHeight: 1 }} component="span">
                       {it.icon}
                     </Box>
                   </Box>
                 </Tooltip>
               );
             })}
-            <style>
-              {`@keyframes slowSpin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
-                @keyframes slowSpinReverse { from { transform: rotate(0deg) } to { transform: rotate(-360deg) } }
-                @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }`}
-            </style>
           </>
         )}
       </Box>
