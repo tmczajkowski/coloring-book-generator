@@ -72,5 +72,4 @@ This will start the backend and frontend services. The frontend will be availabl
     - `GEMINI_API_KEY`
     - `PRINTER_URI`
     - `DATA_DIR`
-    - `OPENAI_IMAGE_MODEL`
     - `GEMINI_IMAGE_MODEL`

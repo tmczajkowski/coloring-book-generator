@@ -37,7 +37,3 @@
   - Steps to test locally; include screenshots/GIFs for UI changes.
   - Note environment needs and breaking changes.
 
-## Security & Configuration
-- Copy `.env.example` to `.env` (repo root or `backend/` — backend loads both) and set:
-  - `OPENAI_API_KEY`, `PRINTER_URI`, `DATA_DIR` (defaults to `backend/data`), `OPENAI_IMAGE_MODEL`.
-- Do not commit secrets. Ensure `DATA_DIR` is writable.

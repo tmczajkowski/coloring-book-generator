@@ -1,0 +1,57 @@
+services:
+  backend:
+    image: ghcr.io/patresss/coloring-backend:latest
+    container_name: coloring-backend
+    environment:
+      # ========================================
+      # WYMAGANE - Klucze API
+      # ========================================
+      - OPENAI_API_KEY=                       # Klucz OpenAI (transkrypcja i ulepszanie promptów)
+      - GEMINI_API_KEY=                       # Klucz Gemini (generowanie obrazów)
+
+      # ========================================
+      # OPCJONALNE - Drukowanie
+      # ========================================
+      - PRINTER_URI=                          # Adres drukarki IPP, np: ipp://192.168.1.100/ipp/print
+      - PRINTER_MEDIA=iso_a4_210x297mm        # Format papieru (domyślnie A4)
+
+      # ========================================
+      # OPCJONALNE - Modele AI
+      # ========================================
+      - GEMINI_IMAGE_MODEL=gemini-2.5-flash-image            # Model Gemini do generowania obrazów
+      - GEMINI_IMAGE_ASPECT_RATIO=2:3                        # Proporcje obrazu (pionowe: 2:3, poziome: 3:2)
+      - OPENAI_TEXT_MODEL=gpt-5-mini                         # Model OpenAI do tekstu
+      - OPENAI_STT_MODEL=whisper-1                           # Model OpenAI do transkrypcji mowy
+
+      # ========================================
+      # OPCJONALNE - Konfiguracja aplikacji
+      # ========================================
+      - NODE_ENV=production                   # Środowisko (production/development)
+      - DATA_DIR=/data                        # Ścieżka do folderu z danymi (w kontenerze)
+      - REFERENCE_DIR=/reference              # Ścieżka do folderu z obrazami referencyjnymi
+      - OPENAI_TIMEOUT_MS=240000              # Timeout dla API OpenAI (w milisekundach)
+      - CORS_ORIGIN=http://localhost:5173     # Dozwolone źródło CORS
+      - APP_PASSWORD=                         # Hasło dostępu do aplikacji (puste = brak ochrony)
+
+    volumes:
+      # Montowanie folderów lokalnych do kontenera
+      - ./data:/data                          # Folder z wygenerowanymi kolorowankami
+      - ./reference:/reference                # Folder z obrazami referencyjnymi
+
+    ports:
+      - "3000:3000"                           # Port API backendu
+
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  frontend:
+    image: ghcr.io/patresss/coloring-frontend:latest
+    container_name: coloring-frontend
+    depends_on:
+      backend:
+        condition: service_healthy            # Poczekaj aż backend będzie zdrowy przed startem
+    ports:
+      - "5173:80"                             # Port aplikacji webowej

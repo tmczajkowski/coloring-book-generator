@@ -1,53 +1,70 @@
-# Coloring Book Generator
+# Generator Kolorowanek
 
-A small full‑stack app to generate, view, and print coloring pages. Backend: TypeScript/Express. Frontend: React + Vite.
+Aplikacja do generowania, przeglądania i drukowania kolorowanek na podstawie promptów głosowych lub tekstowych.
 
-## Prerequisites
-- Node.js 20+ and npm
-- Docker (optional) and Docker Compose
+Aplikacja została w 99% wygenerowana przez AI.
 
-## Local Development
-- Backend (API at `http://localhost:3000`):
-  - `cd backend`
-  - `npm i`
-  - `npm run dev`
-- Frontend (Vite at `http://localhost:5173`, proxy to backend):
-  - `cd frontend`
-  - `npm i`
-  - `npm run dev`
+## Czym jest ta aplikacja?
 
-## Local Production (no Docker)
-- Backend:
-  - `cd backend`
-  - `npm i && npm run build`
-  - `npm start`
-- Frontend:
-  - `cd frontend`
-  - `npm i && npm run build`
-  - `npm run preview`
+Generator Kolorowanek to pełno-stackowa aplikacja webowa, która wykorzystuje sztuczną inteligencję (Gemini) do tworzenia czarno-białych ilustracji idealnych do kolorowania. Aplikacja umożliwia:
+- **Generowanie kolorowanek** z opisów głosowych lub tekstowych
+- **Automatyczne ulepszanie promptów** dla lepszych rezultatów
+- **Rozpoznawanie obrazów referencyjnych** do dokładniejszego odwzorowania postaci
+- **Drukowanie** bezpośrednio z aplikacji (opcjonalne)
+- **Przeglądanie historii** wcześniej wygenerowanych kolorowanek
 
-## Docker Compose
-- Example compose building locally instead of pulling images:
+## Funkcje
+
+### Główne możliwości
+- **Prompt głosowy lub tekstowy**: Nagraj swoją prośbę lub wybierz gotową sugestię
+- **Orientacja obrazu**: Tryb pionowy (2:3) lub poziomy (3:2)
+- **Automatyczne drukowanie**: Opcja automatycznego wydruku po wygenerowaniu
+- **Ulepszanie promptów**: AI rozszerza Twój opis dla lepszych rezultatów
+- **Obrazy referencyjne**: Automatyczne wykrywanie i używanie obrazów referencyjnych z folderu
+- **Historia**: Przeglądaj i ponownie drukuj wcześniej wygenerowane kolorowanki
+- **Dźwięki**: Opcjonalne efekty dźwiękowe
+- **Wskazówki**: Pomocne podpowiedzi dla nowych użytkowników
+- **Ochrona hasłem**: Opcjonalna autentykacja
+
+### Panel ustawień
+- ✅ Automatyczne drukowanie po wygenerowaniu
+- ✅ Ulepszanie promptów przez AI
+- ✅ Tryb poziomy (domyślnie pionowy)
+- ✅ Efekty dźwiękowe
+
+### Proces generowania
+1. **Nagrywanie** - Nagraj prompt głosowy lub wybierz sugestię
+2. **Transkrypcja** - Przekształcenie mowy na tekst (OpenAI Whisper)
+3. **Ulepszanie** - Opcjonalne wzbogacenie promptu (GPT)
+4. **Wykrywanie referencji** - Automatyczne dopasowanie obrazów referencyjnych
+5. **Generowanie** - Tworzenie kolorowanki (Gemini)
+6. **Drukowanie** - Opcjonalne automatyczne wydrukowanie
+7. **Gotowe** - Podgląd i możliwość pobrania/wydruku
+
+## Wymagania
+
+- **Node.js** 20+ i npm
+- **Docker** i Docker Compose (opcjonalnie)
+- **Klucz API Gemini** (wymagany)
+- **Klucz API OpenAI** (wymagany)
+- **Drukarka IPP** (opcjonalnie, dla funkcji drukowania)
+
+## Instalacja i uruchomienie
+
+### Docker Compose (zalecane)
+
+#### Podstawowa konfiguracja
+
+Stwórz plik `docker-compose.yml`:
 
 ```yaml
 services:
   backend:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
+    image: ghcr.io/patresss/coloring-backend:latest
+    container_name: coloring-backend
     environment:
-      - NODE_ENV=production
-      - DATA_DIR=/data
-      - OPENAI_API_KEY=sk-... # OpenAI key (prompt improve + transcription)
-      - GEMINI_API_KEY=... # Gemini key used for image generation
-      - PRINTER_URI=ipp://<host-or-ip>/ipp/print # Your printer url
-      - GEMINI_IMAGE_MODEL=gemini-2.5-flash-image
-      - GEMINI_IMAGE_ASPECT_RATIO=2:3
-      - OPENAI_IMAGE_MODEL=gpt-image-1
-      - OPENAI_TEXT_MODEL=gpt-5-mini
-      - OPENAI_STT_MODEL=whisper-1
-      - OPENAI_TIMEOUT_MS=240000
-      - APP_PASSWORD=yourpassword # optional
+      - OPENAI_API_KEY=sk-twoj-klucz-openai
+      - GEMINI_API_KEY=twoj-klucz-gemini
     volumes:
       - ./data:/data
     ports:
@@ -57,6 +74,98 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+
+  frontend:
+    image: ghcr.io/patresss/coloring-frontend:latest
+    container_name: coloring-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+```
+
+Uruchom aplikację:
+```bash
+docker-compose up -d
+```
+
+Aplikacja będzie dostępna pod adresem: `http://localhost:5173`
+
+#### Konfiguracja zaawansowana (wszystkie opcje)
+
+```yaml
+services:
+  backend:
+    image: ghcr.io/patresss/coloring-backend:latest
+    container_name: coloring-backend
+    environment:
+      # WYMAGANE
+      - OPENAI_API_KEY=sk-twoj-klucz-openai
+      - GEMINI_API_KEY=twoj-klucz-gemini
+
+      # OPCJONALNE - Drukowanie
+      - PRINTER_URI=ipp://192.168.1.100/ipp/print
+      - PRINTER_MEDIA=iso_a4_210x297mm
+
+      # OPCJONALNE - Modele AI
+      - GEMINI_IMAGE_MODEL=gemini-2.5-flash-image
+      - GEMINI_IMAGE_ASPECT_RATIO=2:3
+      - OPENAI_TEXT_MODEL=gpt-5-mini
+      - OPENAI_STT_MODEL=whisper-1
+
+      # OPCJONALNE - Konfiguracja
+      - OPENAI_TIMEOUT_MS=240000
+      - NODE_ENV=production
+      - DATA_DIR=/data
+      - REFERENCE_DIR=/reference
+      - CORS_ORIGIN=http://localhost:5173
+      - APP_PASSWORD=twoje-haslo-dostepu
+    volumes:
+      - ./data:/data
+      - ./reference:/reference
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  frontend:
+    image: ghcr.io/patresss/coloring-frontend:latest
+    container_name: coloring-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+```
+
+#### Budowanie z kodu źródłowego (Docker)
+
+Jeśli chcesz zbudować obrazy lokalnie zamiast używać gotowych:
+
+```yaml
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      - OPENAI_API_KEY=sk-twoj-klucz-openai
+      - GEMINI_API_KEY=twoj-klucz-gemini
+    volumes:
+      - ./data:/data
+      - ./reference:/reference
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
   frontend:
     build:
       context: .
@@ -68,6 +177,113 @@ services:
       - "5173:80"
 ```
 
-## Notes
-- Do not commit secrets. 
-- Ensure `DATA_DIR` is writable (mapped volume in Docker, or `backend/data` locally).
+Uruchom:
+```bash
+docker-compose up -d --build
+```
+
+### Lokalne uruchomienie (bez Docker)
+
+#### Tryb deweloperski
+
+1. **Backend** (API dostępne na `http://localhost:3000`):
+   ```bash
+   cd backend
+   npm install
+   cp ../.env.example .env
+   # Edytuj .env i uzupełnij klucze API
+   npm run dev
+   ```
+
+2. **Frontend** (Vite na `http://localhost:5173`):
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+#### Tryb produkcyjny
+
+1. **Backend**:
+   ```bash
+   cd backend
+   npm install
+   npm run build
+   npm start
+   ```
+
+2. **Frontend**:
+   ```bash
+   cd frontend
+   npm install
+   npm run build
+   npm run preview
+   ```
+
+## Konfiguracja
+
+### Zmienne środowiskowe
+
+Stwórz plik `.env` w głównym katalogu lub w katalogu `backend/`:
+
+```bash
+# WYMAGANE
+OPENAI_API_KEY=sk-twoj-klucz-openai
+GEMINI_API_KEY=twoj-klucz-gemini
+
+# OPCJONALNE - Drukowanie
+PRINTER_URI=ipp://adres-drukarki/ipp/print
+PRINTER_MEDIA=iso_a4_210x297mm
+
+# OPCJONALNE - Foldery
+DATA_DIR=./data
+REFERENCE_DIR=./reference
+
+# OPCJONALNE - Modele
+GEMINI_IMAGE_MODEL=gemini-2.5-flash-image
+GEMINI_IMAGE_ASPECT_RATIO=2:3
+OPENAI_TEXT_MODEL=gpt-5-mini
+OPENAI_STT_MODEL=whisper-1
+
+# OPCJONALNE - Pozostałe
+OPENAI_TIMEOUT_MS=240000
+CORS_ORIGIN=http://localhost:5173
+APP_PASSWORD=haslo-dostepu
+```
+
+### Obrazy referencyjne
+
+Umieść obrazy referencyjne (np. zdjęcia członków rodziny, zwierząt domowych) w folderze `reference/`. Aplikacja automatycznie wykryje i użyje odpowiednich obrazów na podstawie promptu.
+
+Przykład:
+```
+reference/
+  ├── mama.jpg
+  ├── tata.png
+  ├── pies_burek.jpg
+  └── kot_mruczek.jpg
+```
+
+Gdy użytkownik poprosi o "kolorowankę z Burkiem", aplikacja automatycznie użyje `pies_burek.jpg` jako referencję.
+
+## Architektura
+
+### Backend
+- **TypeScript + Express** - API REST
+- **Gemini** - Generowanie obrazów kolorowanek
+- **OpenAI Whisper** - Transkrypcja mowy na tekst
+- **OpenAI GPT** - Ulepszanie promptów i wykrywanie referencji
+- **IPP (Internet Printing Protocol)** - Drukowanie
+
+### Frontend
+- **React + Vite** - Szybki interfejs użytkownika
+- **Material-UI** - Komponenty UI
+- **Emotion** - Stylowanie
+
+
+## Licencja
+MIT
+
+## Autor
+
+Patryk Piechaczek ([@patresss](https://github.com/patresss))
