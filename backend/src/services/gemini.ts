@@ -135,7 +135,7 @@ const generateWithGemini = async (subject: string, references: string[] | undefi
       .flatMap((c: any) => (c.content?.parts ?? []))
       .map((part: any) => part?.text)
       .find((txt) => typeof txt === 'string' && txt.trim().length > 0);
-    const shouldRetry = attempt + 1 < maxAttempts && finishReasons.every((fr) => fr !== 'IMAGE_BLOCKED');
+    const shouldRetry = attempt + 1 < maxAttempts && finishReasons.every((fr) => fr !== 'IMAGE_BLOCKED' && fr !== 'IMAGE_OTHER');
     if (shouldRetry) {
       logger.warn('Gemini: missing inline data, retrying', {
         attempt,
@@ -145,6 +145,15 @@ const generateWithGemini = async (subject: string, references: string[] | undefi
       });
       continue;
     }
+
+    if (finishReasons.includes('IMAGE_OTHER')) {
+      logger.error('Gemini: missing inline image data due to inconsistent prompt', {
+        subject,
+        finishReasons,
+      });
+      throw new Error('Nie udało się wygenerować obrazu, prawdopodobnie z powodu niespójnego polecenia (np. prośba o kolorowy obrazek do czarno-białej kolorowanki). Spróbuj uprościć lub przeformułować swój pomysł.');
+    }
+
     logger.error('Gemini: missing inline image data', {
       subject,
       promptFeedback: result.response?.promptFeedback,
