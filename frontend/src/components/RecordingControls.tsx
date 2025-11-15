@@ -129,6 +129,12 @@ const wiggle = keyframes`
   100% { transform: rotate(0deg) translateY(0); }
 `;
 
+const sparkle = keyframes`
+  0% { opacity: 0; transform: scale(0) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1) rotate(180deg); }
+  100% { opacity: 0; transform: scale(0) rotate(360deg); }
+`;
+
 const WAVEFORM_GAP = 0.6;
 
 type RingGeometry = { radius: number; item: number; emoji: number };
@@ -185,6 +191,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
   const orbitFrameRef = React.useRef<number | null>(null);
   const orbitLastTimestampRef = React.useRef<number | null>(null);
   const [orbitPaused, setOrbitPaused] = React.useState(false);
+  const [hoveredIdeaIndex, setHoveredIdeaIndex] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     const cleanup = () => {
@@ -229,21 +236,51 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
               alignItems: 'center',
               gap: { xs: 1, sm: 1.5 },
               bgcolor: (theme) => theme.palette.background.paper,
-              opacity: 0.8,
+              opacity: 0.95,
               borderRadius: 3,
               px: { xs: 1, sm: 1.5 },
               py: { xs: 0.75, sm: 1 },
-              boxShadow: 4,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
               width: 'fit-content',
               maxWidth: '100%',
               mx: 'auto',
               position: 'relative',
               zIndex: 2,
+              backdropFilter: 'blur(8px)',
+              border: '1px solid',
+              borderColor: 'divider',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                boxShadow: '0 6px 16px rgba(0,0,0,0.15)',
+                opacity: 1,
+              },
             }}
           >
             <Tooltip title={landscapeMode ? 'Orientacja pozioma' : 'Orientacja pionowa'} arrow>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                {landscapeMode ? <CropLandscapeIcon color="primary" /> : <CropPortraitIcon color="action" />}
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  transition: 'transform 0.2s ease',
+                  '&:hover': { transform: 'scale(1.05)' },
+                }}
+              >
+                {landscapeMode ? (
+                  <CropLandscapeIcon
+                    color="primary"
+                    sx={{
+                      transition: 'all 0.3s ease',
+                      animation: landscapeMode ? 'icon-pop 0.4s ease' : 'none',
+                      '@keyframes icon-pop': {
+                        '0%, 100%': { transform: 'scale(1)' },
+                        '50%': { transform: 'scale(1.2)' },
+                      },
+                    }}
+                  />
+                ) : (
+                  <CropPortraitIcon color="action" sx={{ transition: 'all 0.3s ease' }} />
+                )}
                 <Switch
                   size="small"
                   checked={landscapeMode}
@@ -254,8 +291,26 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
               </Box>
             </Tooltip>
             <Tooltip title={autoPrint ? 'Automatyczne drukowanie włączone' : 'Kolorowanki nie będą drukowane automatycznie'} arrow>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <PrintIcon color={autoPrint ? 'primary' : 'action'} />
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  transition: 'transform 0.2s ease',
+                  '&:hover': { transform: 'scale(1.05)' },
+                }}
+              >
+                <PrintIcon
+                  color={autoPrint ? 'primary' : 'action'}
+                  sx={{
+                    transition: 'all 0.3s ease',
+                    animation: autoPrint ? 'icon-pop 0.4s ease' : 'none',
+                    '@keyframes icon-pop': {
+                      '0%, 100%': { transform: 'scale(1)' },
+                      '50%': { transform: 'scale(1.2)' },
+                    },
+                  }}
+                />
                 <Switch
                   size="small"
                   checked={autoPrint}
@@ -266,8 +321,26 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
               </Box>
             </Tooltip>
             <Tooltip title={improveEnabled ? 'Ulepszanie promptu włączone' : 'Wysyłaj oryginalny prompt'} arrow>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <AutoAwesomeIcon color={improveEnabled ? 'primary' : 'action'} />
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  transition: 'transform 0.2s ease',
+                  '&:hover': { transform: 'scale(1.05)' },
+                }}
+              >
+                <AutoAwesomeIcon
+                  color={improveEnabled ? 'primary' : 'action'}
+                  sx={{
+                    transition: 'all 0.3s ease',
+                    animation: improveEnabled ? 'icon-pop 0.4s ease' : 'none',
+                    '@keyframes icon-pop': {
+                      '0%, 100%': { transform: 'scale(1)' },
+                      '50%': { transform: 'scale(1.2)' },
+                    },
+                  }}
+                />
                 <Switch
                   size="small"
                   checked={improveEnabled}
@@ -338,6 +411,21 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
         }}
       >
         <Box sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+          {/* Outer glow ring */}
+          {canRecord && status !== 'recording' && (
+            <Box
+              sx={{
+                position: 'absolute',
+                width: { xs: 110, sm: 190 },
+                height: { xs: 110, sm: 190 },
+                borderRadius: '50%',
+                border: '3px solid',
+                borderColor: 'error.main',
+                opacity: 0.3,
+                animation: `${pulse} 1.8s ease-in-out infinite`,
+              }}
+            />
+          )}
           <Fab
             aria-label={status === 'recording' ? 'Generuj kolorowanke' : 'Nagraj prompt glosowy'}
             color={status === 'recording' ? 'success' : 'error'}
@@ -345,12 +433,14 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
             sx={{
               width: { xs: 96, sm: 168 },
               height: { xs: 96, sm: 168 },
+              position: 'relative',
               animation:
                 status === 'recording'
                   ? `${recordPulseSuccess} 1.4s ease-in-out infinite`
                   : canRecord
                     ? `${pulse} 1.8s ease-in-out infinite`
                     : 'none',
+              transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
               '&.Mui-disabled': {
                 bgcolor: status === 'recording' ? 'success.main' : 'error.main',
                 color: 'common.white',
@@ -358,12 +448,31 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
               },
               '& svg': {
                 fontSize: { xs: 36, sm: 56 },
+                transition: 'transform 0.3s ease',
               },
               '&:hover': {
                 bgcolor: status === 'recording' ? 'success.dark' : 'error.dark',
+                transform: 'scale(1.05)',
+                '& svg': {
+                  transform: 'scale(1.1)',
+                },
+              },
+              '&:active': {
+                transform: 'scale(0.98)',
               },
               '&:not(.Mui-disabled)': {
                 cursor: 'pointer',
+              },
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%)',
+                pointerEvents: 'none',
               },
             }}
             disabled={fabDisabled}
@@ -392,6 +501,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                   height: 32,
                   width: waveformWidthPx,
                   justifyContent: 'space-between',
+                  position: 'relative',
                 }}
               >
                 {Array.from({ length: 12 }).map((_, i) => (
@@ -402,10 +512,23 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                       width: { xs: 4, sm: 6 },
                       height: '100%',
                       transformOrigin: 'center bottom',
-                      backgroundColor: 'error.main',
+                      background: `linear-gradient(to top, #EF476F 0%, #FB5607 50%, #FFB703 100%)`,
                       borderRadius: 1,
                       animation: `${wave} ${1.1 + (i % 5) * 0.12}s ease-in-out ${i * 0.08}s infinite`,
-                      boxShadow: '0 2px 8px rgba(239,71,111,0.35)',
+                      boxShadow: '0 2px 12px rgba(239,71,111,0.5), 0 0 20px rgba(251,86,7,0.3)',
+                      transition: 'box-shadow 0.3s ease',
+                      position: 'relative',
+                      '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'linear-gradient(to top, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 100%)',
+                        borderRadius: 1,
+                        pointerEvents: 'none',
+                      },
                     }}
                   />
                 ))}
@@ -428,6 +551,8 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
               const angle = (index / ideas.length) * Math.PI * 2 + orbitAngle;
               const x = Math.cos(angle) * ring.radius;
               const y = Math.sin(angle) * ring.radius;
+              const isHovered = hoveredIdeaIndex === index;
+
               return (
                 <Tooltip title={it.label} arrow key={`${it.icon}-${index}`}>
                   <Box
@@ -435,8 +560,14 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                       const prompt = it.prompt;
                       onIdeaSelect(prompt);
                     }}
-                    onMouseEnter={handleIdeaMouseEnter}
-                    onMouseLeave={handleIdeaMouseLeave}
+                    onMouseEnter={() => {
+                      handleIdeaMouseEnter();
+                      setHoveredIdeaIndex(index);
+                    }}
+                    onMouseLeave={() => {
+                      handleIdeaMouseLeave();
+                      setHoveredIdeaIndex(null);
+                    }}
                     role="button"
                     aria-label={`Pomysł: ${it.label}`}
                     sx={{
@@ -464,7 +595,38 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                       '&:active': { transform: 'translate(-50%, -50%) scale(0.96)' },
                     }}
                   >
-                    <Box sx={{ fontSize: ring.emoji, lineHeight: 1 }} component="span">
+                    {/* Sparkle effects on hover */}
+                    {isHovered && (
+                      <>
+                        {[...Array(6)].map((_, i) => (
+                          <Box
+                            key={i}
+                            sx={{
+                              position: 'absolute',
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              bgcolor: '#FFF',
+                              boxShadow: '0 0 8px #FFB703',
+                              top: `${15 + Math.random() * 70}%`,
+                              left: `${15 + Math.random() * 70}%`,
+                              animation: `${sparkle} 0.8s ease-out infinite`,
+                              animationDelay: `${i * 0.15}s`,
+                              pointerEvents: 'none',
+                            }}
+                          />
+                        ))}
+                      </>
+                    )}
+                    <Box
+                      sx={{
+                        fontSize: ring.emoji,
+                        lineHeight: 1,
+                        transition: 'transform 0.2s ease',
+                        transform: isHovered ? 'scale(1.15)' : 'scale(1)',
+                      }}
+                      component="span"
+                    >
                       {it.icon}
                     </Box>
                   </Box>
