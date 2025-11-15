@@ -6,7 +6,6 @@ import { api, HistoryItem, type RuntimeConfig } from './api/client';
 import { auth, onAuthRequired } from './api/auth';
 import { AnimatedBackground } from './components/AnimatedBackground';
 import { Confetti } from './components/Confetti';
-import { Mascot } from './components/Mascot';
 import { AppHeader } from './components/AppHeader';
 import { HistorySidebar } from './components/HistorySidebar';
 import { HistoryDialog } from './components/HistoryDialog';
@@ -72,13 +71,6 @@ export const App: React.FC = () => {
   const [sfxEnabled, setSfxEnabled] = useState<boolean>(() => {
     try {
       const v = localStorage.getItem('sfxEnabled');
-      if (v != null) return v === 'true';
-    } catch {}
-    return true;
-  });
-  const [tipsEnabled, setTipsEnabled] = useState<boolean>(() => {
-    try {
-      const v = localStorage.getItem('kidTips');
       if (v != null) return v === 'true';
     } catch {}
     return true;
@@ -280,7 +272,6 @@ export const App: React.FC = () => {
   }, [status, canRecord]);
 
   useEffect(() => { try { localStorage.setItem('sfxEnabled', String(sfxEnabled)); } catch {} }, [sfxEnabled]);
-  useEffect(() => { try { localStorage.setItem('kidTips', String(tipsEnabled)); } catch {} }, [tipsEnabled]);
 
   const handleCloseDialog = async () => {
     if (status === 'done' && id) {
@@ -543,7 +534,6 @@ export const App: React.FC = () => {
         />
       )}
       <PromptDetailsDialog item={promptInfoItem} open={!!promptInfoItem} onClose={() => setPromptInfoItem(null)} />
-      <Mascot status={status} enabled={tipsEnabled} onToggle={setTipsEnabled} />
     </Box>
   );
 };
