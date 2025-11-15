@@ -129,6 +129,8 @@ const wiggle = keyframes`
   100% { transform: rotate(0deg) translateY(0); }
 `;
 
+const WAVEFORM_GAP = 0.6;
+
 type RingGeometry = { radius: number; item: number; emoji: number };
 
 export const RecordingControls: React.FC<RecordingControlsProps> = ({
@@ -152,6 +154,9 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
     item: isMobile ? 72 : 88,
     emoji: isMobile ? 30 : 34,
   }));
+  const barWidth = isMobile ? 4 : 6;
+  const waveformWidth = barWidth * 12 + WAVEFORM_GAP * 8 * 11;
+  const waveformWidthPx = `${waveformWidth}px`;
 
   React.useEffect(() => {
     const recalc = () => {
@@ -380,7 +385,14 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
             >
               <Box
                 aria-label="Nagrywanie – wizualizacja dźwięku"
-                sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.6, height: 32 }}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'flex-end',
+                  gap: WAVEFORM_GAP,
+                  height: 32,
+                  width: waveformWidthPx,
+                  justifyContent: 'space-between',
+                }}
               >
                 {Array.from({ length: 12 }).map((_, i) => (
                   <Box
@@ -403,7 +415,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                 color="error"
                 startIcon={<CloseIcon />}
                 onClick={onCancelRecording}
-                sx={{ width: { xs: 160, sm: 240 }, borderRadius: 3 }}
+                sx={{ width: waveformWidthPx, borderRadius: 3 }}
               >
                 Anuluj
               </Button>
