@@ -178,6 +178,11 @@ services:
       - REFERENCE_DIR=/reference
       - CORS_ORIGIN=http://localhost:5173
       - APP_PASSWORD=twoje-haslo-dostepu
+
+      # OPCJONALNE - Dostosowanie promptów systemowych
+      - PROMPT_COLORING_BOOK=prompt-dla-gemini
+      - PROMPT_IMPROVE=prompt-do-ulepszania
+      - PROMPT_DETECT_REFERENCES=prompt-do-wykrywania-referencji
     volumes:
       - ./data:/data
       - ./reference:/reference
@@ -267,6 +272,11 @@ OPENAI_STT_MODEL=whisper-1
 OPENAI_TIMEOUT_MS=240000
 CORS_ORIGIN=http://localhost:5173
 APP_PASSWORD=haslo-dostepu
+
+# OPCJONALNE - Dostosowanie promptów systemowych
+PROMPT_COLORING_BOOK=twoj-custom-prompt-dla-gemini
+PROMPT_IMPROVE=twoj-custom-prompt-do-ulepszania
+PROMPT_DETECT_REFERENCES=twoj-custom-prompt-do-wykrywania-referencji
 ```
 
 ### Obrazy referencyjne

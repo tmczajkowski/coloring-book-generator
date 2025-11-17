@@ -6,6 +6,11 @@ services:
       # WYMAGANE - Uzupełnij swoimi kluczami API
       - OPENAI_API_KEY= # OpenAI key for transcription/prompt improvements
       - GEMINI_API_KEY= # Gemini key for image generation
+
+      # OPCJONALNE - Dostosowanie promptów systemowych
+      # - PROMPT_COLORING_BOOK= # Główny prompt dla Gemini (instrukcje rysowania kolorowanki)
+      # - PROMPT_IMPROVE= # Prompt dla GPT do ulepszania promptów użytkownika
+      # - PROMPT_DETECT_REFERENCES= # Prompt dla GPT do wykrywania referencji z plików
     volumes:
       - ./data:/data
       - ./reference:/reference

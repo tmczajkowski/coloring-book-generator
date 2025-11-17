@@ -33,6 +33,13 @@ services:
       - CORS_ORIGIN=http://localhost:5173     # Dozwolone źródło CORS
       - APP_PASSWORD=                         # Hasło dostępu do aplikacji (puste = brak ochrony)
 
+      # ========================================
+      # OPCJONALNE - Dostosowanie promptów systemowych
+      # ========================================
+      - PROMPT_COLORING_BOOK=               # Główny prompt dla Gemini (instrukcje rysowania kolorowanki)
+      - PROMPT_IMPROVE=                     # Prompt dla GPT do ulepszania promptów użytkownika
+      - PROMPT_DETECT_REFERENCES=           # Prompt dla GPT do wykrywania referencji z plików
+
     volumes:
       # Montowanie folderów lokalnych do kontenera
       - ./data:/data                          # Folder z wygenerowanymi kolorowankami
