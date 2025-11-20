@@ -2,7 +2,7 @@
 
 Aplikacja do generowania, przeglądania i drukowania kolorowanek na podstawie promptów głosowych lub tekstowych.
 
-### 📝 [Blog](https://blog.patres.dev/blog/ai-kolorowanki-dla-dzieci/)
+### 📝 [Blog](https://patres.dev/blog/ai-kolorowanki-dla-dzieci/)
 
 ### Demo - wideo:
 [![Demo](https://github.com/Patresss/coloring-book-generator/blob/main/screenshots/video.png?raw=true)](https://www.youtube.com/shorts/d9mASueOgKw)
