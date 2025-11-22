@@ -39,6 +39,24 @@ export const ConfigDialog: React.FC<ConfigDialogProps> = ({ open, runtimeConfig,
       <Divider sx={{ my: 2 }} />
       <Stack spacing={1.5} sx={{ mt: 1 }}>
         <Box>
+          <Typography variant="subtitle2">GEMINI_IMAGE_MODEL</Typography>
+          <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace' }}>
+            {runtimeConfig?.imageModel || '—'}
+          </Box>
+        </Box>
+        <Box>
+          <Typography variant="subtitle2">GEMINI_IMAGE_ASPECT_RATIO</Typography>
+          <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace' }}>
+            {runtimeConfig?.geminiAspectRatio || '—'}
+          </Box>
+        </Box>
+        <Box>
+          <Typography variant="subtitle2">GEMINI_TIMEOUT_MS</Typography>
+          <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace' }}>
+            {runtimeConfig?.geminiTimeoutMs ?? '—'}
+          </Box>
+        </Box>
+        <Box>
           <Typography variant="subtitle2">OPENAI_IMAGE_REFERENCES_MODEL</Typography>
           <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, fontFamily: 'monospace' }}>
             {runtimeConfig?.imageReferencesModel || '—'}

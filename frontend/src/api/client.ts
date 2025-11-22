@@ -29,7 +29,9 @@ export const loadConfig = async () => {
 
 export type RuntimeConfig = {
   openaiTimeoutMs: number;
+  geminiTimeoutMs?: number;
   imageModel?: string;
+  geminiAspectRatio?: string;
   imageReferencesModel?: string;
   textModel?: string;
   sttModel?: string;

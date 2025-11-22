@@ -13,6 +13,7 @@ configRouter.get('/', (_req: Request, res: Response) => {
   const canGenerate = !!config.geminiApiKey; // blokujemy generowanie bez klucza Gemini
   res.json({
     openaiTimeoutMs: config.openaiTimeoutMs,
+    geminiTimeoutMs: config.geminiTimeoutMs,
     imageModel: config.geminiImageModel,
     geminiAspectRatio: config.geminiAspectRatio,
     imageReferencesModel: config.imageReferencesModel,
