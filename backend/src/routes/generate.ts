@@ -48,9 +48,12 @@ generateRouter.post('/', async (req: Request, res: Response) => {
       const meta = await readMeta(id);
       const refs: string[] = Array.isArray(meta?.references) ? meta.references : [];
       let pngBuffer: Buffer;
+      let generationTimeMs: number;
       if (refs.length > 0) {
         try {
-          pngBuffer = await generateImageWithReferences(prompt, refs, { aspectRatio });
+          const result = await generateImageWithReferences(prompt, refs, { aspectRatio });
+          pngBuffer = result.buffer;
+          generationTimeMs = result.generationTimeMs;
         } catch (e: any) {
           logger.error('Generation: reference mode failed', {
             id,
@@ -60,11 +63,14 @@ generateRouter.post('/', async (req: Request, res: Response) => {
           throw e;
         }
       } else {
-        pngBuffer = await generateImage(prompt, { aspectRatio });
+        const result = await generateImage(prompt, { aspectRatio });
+        pngBuffer = result.buffer;
+        generationTimeMs = result.generationTimeMs;
       }
-      
+
       const imgPath = await saveImageBuffer(id, pngBuffer, EXT_PNG);
-      logger.info('Generation: image saved', { id, path: imgPath });
+      await updateMeta(id, { generationTimeMs });
+      logger.info('Generation: image saved', { id, path: imgPath, generationTimeMs });
       res.json({ imageUrl: `/files/${id}/${FILE_IMAGE_PNG}`, thumbUrl: `/files/${id}/${FILE_IMAGE_PNG}`, path: imgPath });
     } catch (e: any) {
       const msg = String(e?.message || e);

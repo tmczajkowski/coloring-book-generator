@@ -55,6 +55,16 @@ export const PromptDetailsDialog: React.FC<PromptDetailsDialogProps> = ({ item, 
               </Box>
             </Box>
           )}
+          {item.generationTimeMs !== undefined && (
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                Czas generowania
+              </Typography>
+              <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {(item.generationTimeMs / 1000).toFixed(2)} sekund
+              </Box>
+            </Box>
+          )}
         </Stack>
       )}
     </DialogContent>

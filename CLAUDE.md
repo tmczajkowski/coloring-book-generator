@@ -51,7 +51,7 @@ Sessions are identified by timestamp IDs and listed via `/api/history`.
 
 ### Key Backend Services
 - **storage.ts**: Session/file management, meta.json operations
-- **gemini.ts**: Image generation with/without reference images, aspect ratio handling, retry logic
+- **gemini.ts**: Image generation with/without reference images using Gemini 3 Pro (supports up to 14 reference images, 1K-4K resolution, aspect ratio handling, retry logic)
 - **openai.ts**: Whisper transcription, GPT-4o-mini prompt improvement
 - **references.ts**: GPT-4o-5 detects which reference files match the prompt
 - **printer.ts**: IPP printing with A4 monochrome settings
@@ -72,9 +72,12 @@ Backend loads `.env` from both current directory and parent directory. Key varia
 - `PRINTER_URI`: Optional IPP printer (e.g., `ipp://hostname/ipp/print`)
 - `DATA_DIR`: Storage location (defaults to `../data`)
 - `REFERENCE_DIR`: Reference images location (defaults to `../reference`)
-- `GEMINI_IMAGE_MODEL`: Model for generation (defaults to `gemini-2.5-flash-image`)
+- `GEMINI_IMAGE_MODEL`: Model for generation (defaults to `gemini-3-pro-image-preview`)
 - `GEMINI_IMAGE_ASPECT_RATIO`: Default aspect ratio like `2:3` (flips to `3:2` for landscape)
-- `OPENAI_TIMEOUT_MS`: Timeout for API calls (defaults to 240000ms)
+- `GEMINI_IMAGE_SIZE`: Image resolution - `1K`, `2K`, or `4K` (defaults to `1K`; only for Gemini 3 models)
+- `GEMINI_API_VERSION`: API version - `v1`, `v1beta`, or `v1alpha` (defaults to `v1beta`)
+- `GEMINI_TIMEOUT_MS`: Timeout for Gemini API calls in milliseconds (defaults to 600000ms / 10 minutes; Gemini 3 Pro requires more time due to thinking mode)
+- `OPENAI_TIMEOUT_MS`: Timeout for OpenAI API calls (defaults to 240000ms)
 - `APP_PASSWORD`: Optional password protection
 
 ## Code Style and Conventions
@@ -117,7 +120,7 @@ These can be overridden via environment variables.
 1. User prompt is sent to `/api/references/detect` with list of available reference files
 2. GPT-4o-5 returns JSON with matching filenames: `{ "references": ["file1.jpg"] }`
 3. If references found, `generateImageWithReferences()` sends them as `inlineData` parts to Gemini
-4. Gemini uses references to create more accurate character likenesses
+4. Gemini 3 Pro uses references to create more accurate character likenesses (supports up to 14 reference images, with up to 6 high-fidelity object images and 5 human images)
 
 ### Landscape Mode
 - Controlled by frontend toggle, persisted to localStorage
