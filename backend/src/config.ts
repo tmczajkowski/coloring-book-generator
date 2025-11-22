@@ -9,12 +9,27 @@ try {
   dotenv.config({ path: parentEnv });
 } catch {}
 
+const parseList = (value?: string | undefined): string[] => {
+  if (!value) return [];
+  return value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+};
+
+const defaultGeminiImageModels = ['gemini-3-pro-image-preview', 'gemini-2.5-flash-image'];
+const configuredImageModels = parseList(process.env.GEMINI_IMAGE_MODELS);
+const fallbackImageModels = configuredImageModels.length > 0 ? configuredImageModels : defaultGeminiImageModels;
+const primaryGeminiModel = fallbackImageModels[0] || defaultGeminiImageModels[0];
+const geminiImageModels = Array.from(new Set([primaryGeminiModel, ...fallbackImageModels]));
+
 export const config = {
   port: Number(process.env.PORT) || 3000,
   dataDir: path.resolve(process.env.DATA_DIR || '../data'),
   referenceDir: path.resolve(process.env.REFERENCE_DIR || '../reference'),
   geminiApiKey: process.env.GEMINI_API_KEY || '',
-  geminiImageModel: process.env.GEMINI_IMAGE_MODEL || 'gemini-3-pro-image-preview',
+  geminiImageModel: primaryGeminiModel,
+  geminiImageModels,
   geminiAspectRatio: process.env.GEMINI_IMAGE_ASPECT_RATIO || '2:3',
   geminiImageSize: (process.env.GEMINI_IMAGE_SIZE as '1K' | '2K' | '4K' | undefined) || '1K',
   geminiApiVersion: (process.env.GEMINI_API_VERSION as 'v1' | 'v1beta' | 'v1alpha' | undefined) || 'v1beta',

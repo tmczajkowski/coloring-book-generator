@@ -15,6 +15,7 @@ configRouter.get('/', (_req: Request, res: Response) => {
     openaiTimeoutMs: config.openaiTimeoutMs,
     geminiTimeoutMs: config.geminiTimeoutMs,
     imageModel: config.geminiImageModel,
+    imageModelOptions: config.geminiImageModels,
     geminiAspectRatio: config.geminiAspectRatio,
     imageReferencesModel: config.imageReferencesModel,
     textModel: config.textModel,

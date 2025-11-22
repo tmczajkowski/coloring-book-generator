@@ -72,7 +72,7 @@ Backend loads `.env` from both current directory and parent directory. Key varia
 - `PRINTER_URI`: Optional IPP printer (e.g., `ipp://hostname/ipp/print`)
 - `DATA_DIR`: Storage location (defaults to `../data`)
 - `REFERENCE_DIR`: Reference images location (defaults to `../reference`)
-- `GEMINI_IMAGE_MODEL`: Model for generation (defaults to `gemini-3-pro-image-preview`)
+- `GEMINI_IMAGE_MODELS`: Lista modeli (rozdzielona przecinkami) dostępnych do przełączania w UI; brak = `gemini-3-pro-image-preview,gemini-2.5-flash-image`
 - `GEMINI_IMAGE_ASPECT_RATIO`: Default aspect ratio like `2:3` (flips to `3:2` for landscape)
 - `GEMINI_IMAGE_SIZE`: Image resolution - `1K`, `2K`, or `4K` (defaults to `1K`; only for Gemini 3 models)
 - `GEMINI_API_VERSION`: API version - `v1`, `v1beta`, or `v1alpha` (defaults to `v1beta`)

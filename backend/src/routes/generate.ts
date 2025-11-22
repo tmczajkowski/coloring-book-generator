@@ -22,11 +22,15 @@ generateRouter.post('/', async (req: Request, res: Response) => {
     if (!config.geminiApiKey) {
       return res.status(503).json({ error: 'Brak konfiguracji GEMINI_API_KEY – generowanie zablokowane.' });
     }
-    const { id, prompt, landscape } = req.body || {};
+    const { id, prompt, landscape, imageModel } = req.body || {};
     if (!id || !prompt) return res.status(400).json({ error: 'Brak id lub promptu' });
     if (!isValidId(id)) return res.status(400).json({ error: 'Nieprawidłowe id' });
     const isLandscape = Boolean(landscape);
-    logger.info('Generation: start', { id, prompt, landscape: isLandscape });
+    const requestedModel = typeof imageModel === 'string' ? imageModel.trim() : undefined;
+    const resolvedModel = requestedModel && config.geminiImageModels.includes(requestedModel)
+      ? requestedModel
+      : config.geminiImageModel;
+    logger.info('Generation: start', { id, prompt, landscape: isLandscape, requestedModel, model: resolvedModel });
     const aspectRatio = flipAspectRatio(config.geminiAspectRatio, isLandscape);
     const dir = getSessionDir(id);
     const metaPath = path.join(dir, 'meta.json');
@@ -49,9 +53,10 @@ generateRouter.post('/', async (req: Request, res: Response) => {
       const refs: string[] = Array.isArray(meta?.references) ? meta.references : [];
       let pngBuffer: Buffer;
       let generationTimeMs: number;
+      const generationOpts = { aspectRatio, model: resolvedModel };
       if (refs.length > 0) {
         try {
-          const result = await generateImageWithReferences(prompt, refs, { aspectRatio });
+          const result = await generateImageWithReferences(prompt, refs, generationOpts);
           pngBuffer = result.buffer;
           generationTimeMs = result.generationTimeMs;
         } catch (e: any) {
@@ -63,14 +68,14 @@ generateRouter.post('/', async (req: Request, res: Response) => {
           throw e;
         }
       } else {
-        const result = await generateImage(prompt, { aspectRatio });
+        const result = await generateImage(prompt, generationOpts);
         pngBuffer = result.buffer;
         generationTimeMs = result.generationTimeMs;
       }
 
       const imgPath = await saveImageBuffer(id, pngBuffer, EXT_PNG);
-      await updateMeta(id, { generationTimeMs, model: config.geminiImageModel });
-      logger.info('Generation: image saved', { id, path: imgPath, generationTimeMs, model: config.geminiImageModel });
+      await updateMeta(id, { generationTimeMs, model: resolvedModel });
+      logger.info('Generation: image saved', { id, path: imgPath, generationTimeMs, model: resolvedModel });
       res.json({ imageUrl: `/files/${id}/${FILE_IMAGE_PNG}`, thumbUrl: `/files/${id}/${FILE_IMAGE_PNG}`, path: imgPath });
     } catch (e: any) {
       const msg = String(e?.message || e);

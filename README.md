@@ -166,7 +166,7 @@ services:
       - PRINTER_MEDIA=iso_a4_210x297mm
 
       # OPCJONALNE - Modele AI
-      - GEMINI_IMAGE_MODEL=gemini-3-pro-image-preview
+      - GEMINI_IMAGE_MODELS=gemini-3-pro-image-preview,gemini-2.5-flash-image
       - GEMINI_IMAGE_ASPECT_RATIO=2:3
       - GEMINI_IMAGE_SIZE=1K
       - GEMINI_API_VERSION=v1beta
@@ -266,7 +266,7 @@ DATA_DIR=./data
 REFERENCE_DIR=./reference
 
 # OPCJONALNE - Modele
-GEMINI_IMAGE_MODEL=gemini-3-pro-image-preview
+GEMINI_IMAGE_MODELS=gemini-3-pro-image-preview,gemini-2.5-flash-image
 GEMINI_IMAGE_ASPECT_RATIO=2:3
 GEMINI_IMAGE_SIZE=1K
 GEMINI_API_VERSION=v1beta
@@ -284,6 +284,8 @@ PROMPT_COLORING_BOOK=twoj-custom-prompt-dla-gemini
 PROMPT_IMPROVE=twoj-custom-prompt-do-ulepszania
 PROMPT_DETECT_REFERENCES=twoj-custom-prompt-do-wykrywania-referencji
 ```
+
+Lista `GEMINI_IMAGE_MODELS` (wartości rozdzielone przecinkami) określa, jakie modele pojawią się w rozwijanej liście w oknie konfiguracji i mogą być przełączane bez restartu aplikacji.
 
 ### Obrazy referencyjne
 

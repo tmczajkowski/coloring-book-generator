@@ -75,7 +75,7 @@ const summarizeParts = (parts: ContentPart[] = []) => parts.map((part) => {
   return 'unknown';
 });
 
-type GeminiOptions = { aspectRatio?: string };
+type GeminiOptions = { aspectRatio?: string; model?: string };
 
 // Timeout wrapper for Gemini API calls
 const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> => {
@@ -106,15 +106,16 @@ const generateWithGemini = async (subject: string, references: string[] | undefi
   }
 
   const effectiveAspect = opts?.aspectRatio || config.geminiAspectRatio;
+  const effectiveModel = opts?.model || config.geminiImageModel;
 
-  const isGemini3 = config.geminiImageModel.includes('gemini-3');
+  const isGemini3 = effectiveModel.includes('gemini-3');
 
   logger.info('Gemini: generate call', {
     subject,
     prompt,
     referencesRequested: references?.length || 0,
     referencesAttached: referenceParts.length,
-    model: config.geminiImageModel,
+    model: effectiveModel,
     aspectRatio: effectiveAspect || 'default',
     imageSize: isGemini3 ? config.geminiImageSize : 'N/A',
     timeoutMs: config.geminiTimeoutMs,
@@ -150,12 +151,12 @@ const generateWithGemini = async (subject: string, references: string[] | undefi
     const start = Date.now();
     const response = await withTimeout(
       client.models.generateContent({
-        model: config.geminiImageModel,
+        model: effectiveModel,
         contents: contents,
         config: generationConfig,
       }),
       config.geminiTimeoutMs,
-      `Gemini ${config.geminiImageModel} generateContent (próba ${attempt + 1}/${maxAttempts})`
+      `Gemini ${effectiveModel} generateContent (próba ${attempt + 1}/${maxAttempts})`
     );
 
     lastResult = response;

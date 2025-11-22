@@ -18,7 +18,7 @@ services:
       # ========================================
       # OPCJONALNE - Modele AI
       # ========================================
-      - GEMINI_IMAGE_MODEL=gemini-2.5-flash-image            # Model Gemini do generowania obrazów
+      - GEMINI_IMAGE_MODELS=gemini-3-pro-image-preview,gemini-2.5-flash-image  # Lista modeli dostępnych do wyboru w UI
       - GEMINI_IMAGE_ASPECT_RATIO=2:3                        # Proporcje obrazu (pionowe: 2:3, poziome: 3:2)
       - OPENAI_TEXT_MODEL=gpt-5-mini                         # Model OpenAI do tekstu
       - OPENAI_STT_MODEL=whisper-1                           # Model OpenAI do transkrypcji mowy
