@@ -118,7 +118,7 @@ services:
       - PRINTER_MEDIA=iso_a4_210x297mm
 
       # OPCJONALNE - Modele AI
-      - GEMINI_IMAGE_MODELS=gemini-3-pro-image-preview,gemini-2.5-flash-image
+      - GEMINI_IMAGE_MODELS=gemini-2.5-flash-image,gemini-3-pro-image-preview
       - GEMINI_IMAGE_ASPECT_RATIO=2:3
       - GEMINI_IMAGE_SIZE=1K
       - GEMINI_API_VERSION=v1beta
@@ -218,7 +218,7 @@ DATA_DIR=./data
 REFERENCE_DIR=./reference
 
 # OPCJONALNE - Modele
-GEMINI_IMAGE_MODELS=gemini-3-pro-image-preview,gemini-2.5-flash-image
+GEMINI_IMAGE_MODELS=gemini-2.5-flash-image,gemini-3-pro-image-preview
 GEMINI_IMAGE_ASPECT_RATIO=2:3
 GEMINI_IMAGE_SIZE=1K
 GEMINI_API_VERSION=v1beta

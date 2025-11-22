@@ -17,7 +17,7 @@ const parseList = (value?: string | undefined): string[] => {
     .filter((entry) => entry.length > 0);
 };
 
-const defaultGeminiImageModels = ['gemini-3-pro-image-preview', 'gemini-2.5-flash-image'];
+const defaultGeminiImageModels = ['gemini-2.5-flash-image', 'gemini-3-pro-image-preview', ];
 const configuredImageModels = parseList(process.env.GEMINI_IMAGE_MODELS);
 const fallbackImageModels = configuredImageModels.length > 0 ? configuredImageModels : defaultGeminiImageModels;
 const primaryGeminiModel = fallbackImageModels[0] || defaultGeminiImageModels[0];
