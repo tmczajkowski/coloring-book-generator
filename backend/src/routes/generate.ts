@@ -22,15 +22,27 @@ generateRouter.post('/', async (req: Request, res: Response) => {
     if (!config.geminiApiKey) {
       return res.status(503).json({ error: 'Brak konfiguracji GEMINI_API_KEY – generowanie zablokowane.' });
     }
-    const { id, prompt, landscape, imageModel } = req.body || {};
+    const { id, prompt, landscape, imageModel, references } = req.body || {};
     if (!id || !prompt) return res.status(400).json({ error: 'Brak id lub promptu' });
     if (!isValidId(id)) return res.status(400).json({ error: 'Nieprawidłowe id' });
     const isLandscape = Boolean(landscape);
     const requestedModel = typeof imageModel === 'string' ? imageModel.trim() : undefined;
+    const providedReferences = Array.isArray(references)
+      ? references
+          .map((ref) => (typeof ref === 'string' ? ref.trim() : ''))
+          .filter((ref) => ref.length > 0)
+      : [];
     const resolvedModel = requestedModel && config.geminiImageModels.includes(requestedModel)
       ? requestedModel
       : config.geminiImageModel;
-    logger.info('Generation: start', { id, prompt, landscape: isLandscape, requestedModel, model: resolvedModel });
+    logger.info('Generation: start', {
+      id,
+      prompt,
+      landscape: isLandscape,
+      requestedModel,
+      model: resolvedModel,
+      providedReferences: providedReferences.length,
+    });
     const aspectRatio = flipAspectRatio(config.geminiAspectRatio, isLandscape);
     const dir = getSessionDir(id);
     const metaPath = path.join(dir, 'meta.json');
@@ -50,7 +62,11 @@ generateRouter.post('/', async (req: Request, res: Response) => {
     } catch {}
     try {
       const meta = await readMeta(id);
-      const refs: string[] = Array.isArray(meta?.references) ? meta.references : [];
+      let refs: string[] = Array.isArray(meta?.references) ? meta.references : [];
+      if (providedReferences.length > 0) {
+        refs = providedReferences;
+        try { await updateMeta(id, { references: refs }); } catch {}
+      }
       let pngBuffer: Buffer;
       let generationTimeMs: number;
       const generationOpts = { aspectRatio, model: resolvedModel };

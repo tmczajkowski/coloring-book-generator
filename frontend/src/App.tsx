@@ -18,6 +18,37 @@ import { LoginOverlay } from './components/LoginOverlay';
 import { MissingEnvNotice } from './components/MissingEnvNotice';
 import { Status } from './types/status';
 
+const extractErrorMessage = (error: unknown, fallback = 'Nieznany błąd') => {
+  const fromPayload = (payload: any): string | undefined => {
+    if (!payload) return undefined;
+    if (typeof payload === 'string') return payload;
+    if (typeof payload.error === 'string') return payload.error;
+    if (payload.error && typeof payload.error.message === 'string') return payload.error.message;
+    if (typeof payload.message === 'string') return payload.message;
+    return undefined;
+  };
+
+  const tryParseJsonMessage = (value: string): string | undefined => {
+    try {
+      const parsed = JSON.parse(value);
+      return fromPayload(parsed);
+    } catch {
+      return undefined;
+    }
+  };
+
+  if (typeof error === 'string') {
+    return tryParseJsonMessage(error) || error;
+  }
+  if (error && typeof error === 'object') {
+    const err = error as any;
+    if (typeof err.message === 'string') {
+      return tryParseJsonMessage(err.message) || err.message;
+    }
+  }
+  return fallback;
+};
+
 export const App: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -225,14 +256,20 @@ export const App: React.FC = () => {
             }
           }
           setStatus('referencing');
+          let detectedReferences: string[] | undefined;
           try {
             const { references } = await api.detectReferences(newId, finalPrompt);
-            setFoundReferences(references || []);
+            detectedReferences = Array.isArray(references) && references.length > 0 ? references : undefined;
+            setFoundReferences(detectedReferences || []);
           } catch (e) {
             throw e;
           }
           setStatus('generating');
-          const gen = await api.generate(newId, finalPrompt, { landscape: landscapeMode, imageModel: activeImageModel });
+          const gen = await api.generate(newId, finalPrompt, {
+            landscape: landscapeMode,
+            imageModel: activeImageModel,
+            references: detectedReferences,
+          });
           setImageUrl(gen.imageUrl);
           if (autoPrint) {
             setStatus('printing');
@@ -380,14 +417,20 @@ export const App: React.FC = () => {
         } catch {}
       }
       setStatus('referencing');
+      let detectedReferences: string[] | undefined;
       try {
         const { references } = await api.detectReferences(newId, finalPrompt);
-        setFoundReferences(references || []);
+        detectedReferences = Array.isArray(references) && references.length > 0 ? references : undefined;
+        setFoundReferences(detectedReferences || []);
       } catch (e) {
         throw e;
       }
       setStatus('generating');
-      const gen = await api.generate(newId, finalPrompt, { landscape: landscapeMode, imageModel: activeImageModel });
+      const gen = await api.generate(newId, finalPrompt, {
+        landscape: landscapeMode,
+        imageModel: activeImageModel,
+        references: detectedReferences,
+      });
       setImageUrl(gen.imageUrl);
       if (autoPrint) {
         setStatus('printing');
@@ -421,7 +464,11 @@ export const App: React.FC = () => {
       setStatus('generating');
       setPrompt(item.prompt);
       const newId = String(Date.now());
-      const gen = await api.generate(newId, item.prompt, { landscape: landscapeMode, imageModel: activeImageModel });
+      const gen = await api.generate(newId, item.prompt, {
+        landscape: landscapeMode,
+        imageModel: activeImageModel,
+        references: Array.isArray(item.references) && item.references.length > 0 ? item.references : undefined,
+      });
       setImageUrl(gen.imageUrl);
       await refreshHistory();
       const updated = (await api.history()).find((i) => i.id === newId);
@@ -467,14 +514,20 @@ export const App: React.FC = () => {
         }
       }
       setStatus('referencing');
+      let detectedReferences: string[] | undefined;
       try {
         const { references } = await api.detectReferences(id, finalPrompt);
-        setFoundReferences(references || []);
+        detectedReferences = Array.isArray(references) && references.length > 0 ? references : undefined;
+        setFoundReferences(detectedReferences || []);
       } catch (e) {
         throw e;
       }
       setStatus('generating');
-      const gen = await api.generate(id, finalPrompt, { landscape: landscapeMode, imageModel: activeImageModel });
+      const gen = await api.generate(id, finalPrompt, {
+        landscape: landscapeMode,
+        imageModel: activeImageModel,
+        references: detectedReferences,
+      });
       setImageUrl(gen.imageUrl);
       if (autoPrint) {
         setStatus('printing');

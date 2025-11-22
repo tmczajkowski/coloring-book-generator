@@ -97,10 +97,11 @@ export const api = {
       return res.json();
     }, OPENAI_TIMEOUT);
   },
-  async generate(id: string, prompt: string, options?: { landscape?: boolean; imageModel?: string }): Promise<{ imageUrl: string; thumbUrl: string }>{
+  async generate(id: string, prompt: string, options?: { landscape?: boolean; imageModel?: string; references?: string[] }): Promise<{ imageUrl: string; thumbUrl: string }>{
     const body: any = { id, prompt };
     if (options?.landscape) body.landscape = true;
     if (options?.imageModel) body.imageModel = options.imageModel;
+    if (Array.isArray(options?.references) && options?.references.length > 0) body.references = options.references;
     return postJson('/api/generate', body, OPENAI_TIMEOUT);
   },
   async improve(id: string, prompt: string): Promise<{ id: string; improved: string }>{
