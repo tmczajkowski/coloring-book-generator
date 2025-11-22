@@ -77,6 +77,7 @@ export const App: React.FC = () => {
   });
   const [ideasVisible, setIdeasVisible] = useState<boolean>(true);
   const [includeTranscribeStep, setIncludeTranscribeStep] = useState<boolean>(false);
+  const [generatingElapsedSeconds, setGeneratingElapsedSeconds] = useState<number>(0);
   const canGenerate = runtimeConfig?.canGenerate !== false;
   const goHome = () => { window.location.href = '/'; };
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -272,6 +273,21 @@ export const App: React.FC = () => {
   }, [status, canRecord]);
 
   useEffect(() => { try { localStorage.setItem('sfxEnabled', String(sfxEnabled)); } catch {} }, [sfxEnabled]);
+
+  // Timer for generating elapsed time
+  useEffect(() => {
+    if (status === 'generating') {
+      setGeneratingElapsedSeconds(0);
+      const startTime = Date.now();
+      const interval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        setGeneratingElapsedSeconds(elapsed);
+      }, 1000);
+      return () => clearInterval(interval);
+    } else {
+      setGeneratingElapsedSeconds(0);
+    }
+  }, [status]);
 
   const handleCloseDialog = async () => {
     if (status === 'done' && id) {
@@ -565,6 +581,7 @@ export const App: React.FC = () => {
         errorText={errorText}
         autoPrint={autoPrint}
         includeTranscribeStep={includeTranscribeStep}
+        generatingElapsedSeconds={generatingElapsedSeconds}
         isMobile={isMobile}
         onClose={handleCloseDialog}
         onRetry={handleRetry}

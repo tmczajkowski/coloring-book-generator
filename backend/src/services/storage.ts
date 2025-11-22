@@ -95,6 +95,7 @@ export const listHistory = async () => {
     const improvedPrompt = meta.improvedPrompt || '';
     const references = Array.isArray(meta.references) ? meta.references : undefined;
     const generationTimeMs = typeof meta.generationTimeMs === 'number' ? meta.generationTimeMs : undefined;
+    const model = typeof meta.model === 'string' ? meta.model : undefined;
     const hasJpg = fsSync.existsSync(imageJpg);
     const hasPng = fsSync.existsSync(imagePng);
     return {
@@ -104,6 +105,7 @@ export const listHistory = async () => {
       improvedPrompt: improvedPrompt || undefined,
       references,
       generationTimeMs,
+      model,
       imageUrl: hasJpg ? `/files/${id}/${FILE_IMAGE_JPG}` : (hasPng ? `/files/${id}/${FILE_IMAGE_PNG}` : undefined),
     };
   }));

@@ -69,8 +69,8 @@ generateRouter.post('/', async (req: Request, res: Response) => {
       }
 
       const imgPath = await saveImageBuffer(id, pngBuffer, EXT_PNG);
-      await updateMeta(id, { generationTimeMs });
-      logger.info('Generation: image saved', { id, path: imgPath, generationTimeMs });
+      await updateMeta(id, { generationTimeMs, model: config.geminiImageModel });
+      logger.info('Generation: image saved', { id, path: imgPath, generationTimeMs, model: config.geminiImageModel });
       res.json({ imageUrl: `/files/${id}/${FILE_IMAGE_PNG}`, thumbUrl: `/files/${id}/${FILE_IMAGE_PNG}`, path: imgPath });
     } catch (e: any) {
       const msg = String(e?.message || e);

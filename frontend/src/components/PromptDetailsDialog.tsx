@@ -65,6 +65,16 @@ export const PromptDetailsDialog: React.FC<PromptDetailsDialogProps> = ({ item, 
               </Box>
             </Box>
           )}
+          {item.model && (
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                Model
+              </Typography>
+              <Box sx={{ p: 1, bgcolor: 'action.hover', borderRadius: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {item.model}
+              </Box>
+            </Box>
+          )}
         </Stack>
       )}
     </DialogContent>

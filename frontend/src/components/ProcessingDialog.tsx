@@ -30,6 +30,7 @@ type ProcessingDialogProps = {
   errorText: string | null;
   autoPrint: boolean;
   includeTranscribeStep: boolean;
+  generatingElapsedSeconds: number;
   isMobile: boolean;
   onClose: () => void;
   onRetry: () => void;
@@ -88,6 +89,7 @@ export const ProcessingDialog: React.FC<ProcessingDialogProps> = ({
   errorText,
   autoPrint,
   includeTranscribeStep,
+  generatingElapsedSeconds,
   isMobile,
   onClose,
   onRetry,
@@ -217,6 +219,13 @@ export const ProcessingDialog: React.FC<ProcessingDialogProps> = ({
             <Box sx={{ height: 4, bgcolor: 'action.selected', borderRadius: 999, overflow: 'hidden' }}>
               <Box sx={{ width: '40%', height: '100%', background: 'linear-gradient(90deg, #EF476F 0%, #FB5607 25%, #FFB703 50%, #06D6A0 75%, #118AB2 100%)', borderRadius: 999, animation: 'indeterminateSlide 1.6s ease-in-out infinite' }} />
             </Box>
+            {status === 'generating' && (
+              <Box sx={{ mt: 2, textAlign: 'center' }}>
+                <Typography variant="body2" color="text.secondary">
+                  Czas generowania: {generatingElapsedSeconds}s
+                </Typography>
+              </Box>
+            )}
             <style>
               {`
                 @keyframes indeterminateSlide {
