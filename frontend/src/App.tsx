@@ -401,6 +401,52 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleRetry = async () => {
+    if (!prompt || !id) return;
+    try {
+      setErrorText(null);
+      setImprovedPrompt(null);
+      setFoundReferences(null);
+      let finalPrompt = prompt;
+      if (improveEnabled) {
+        setStatus('improving');
+        try {
+          const { improved } = await api.improve(id, prompt);
+          setImprovedPrompt(improved);
+          finalPrompt = improved;
+        } catch (e) {
+          console.error('Improve failed, fallback to original prompt:', e);
+          setImprovedPrompt(null);
+        }
+      }
+      setStatus('referencing');
+      try {
+        const { references } = await api.detectReferences(id, finalPrompt);
+        setFoundReferences(references || []);
+      } catch (e) {
+        throw e;
+      }
+      setStatus('generating');
+      const gen = await api.generate(id, finalPrompt, { landscape: landscapeMode });
+      setImageUrl(gen.imageUrl);
+      if (autoPrint) {
+        setStatus('printing');
+        try {
+          await api.print(id);
+        } catch (e) {
+          console.error('Print failed:', e);
+        }
+      }
+      setStatus('done');
+      await refreshHistory();
+    } catch (e: any) {
+      console.error('Retry failed', e);
+      setErrorText(e?.message || 'Wystąpił błąd podczas przetwarzania.');
+      setStatus('error');
+      sfxError();
+    }
+  };
+
   const handleLoginSubmit = async () => {
     setLoginErr(null);
     setLoginBusy(true);
@@ -521,6 +567,7 @@ export const App: React.FC = () => {
         includeTranscribeStep={includeTranscribeStep}
         isMobile={isMobile}
         onClose={handleCloseDialog}
+        onRetry={handleRetry}
       />
       <ConfigDialog open={configOpen} runtimeConfig={runtimeConfig} onClose={() => setConfigOpen(false)} />
       {isMobile && (

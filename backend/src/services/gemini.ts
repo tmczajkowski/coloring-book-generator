@@ -151,7 +151,7 @@ const generateWithGemini = async (subject: string, references: string[] | undefi
         subject,
         finishReasons,
       });
-      throw new Error('Nie udało się wygenerować obrazu, prawdopodobnie z powodu niespójnego polecenia (np. prośba o kolorowy obrazek do czarno-białej kolorowanki). Spróbuj uprościć lub przeformułować swój pomysł.');
+      throw new Error(`Nie udało się wygenerować obrazu, błąd: ${finishReasons} Spróbuj uprościć lub przeformułować swój pomysł.`);
     }
 
     logger.error('Gemini: missing inline image data', {

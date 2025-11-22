@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import CelebrationIcon from '@mui/icons-material/Celebration';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { Status } from '../types/status';
 import { stripExtension } from '../utils/strings';
 
@@ -31,6 +32,7 @@ type ProcessingDialogProps = {
   includeTranscribeStep: boolean;
   isMobile: boolean;
   onClose: () => void;
+  onRetry: () => void;
 };
 
 const getSteps = (
@@ -88,6 +90,7 @@ export const ProcessingDialog: React.FC<ProcessingDialogProps> = ({
   includeTranscribeStep,
   isMobile,
   onClose,
+  onRetry,
 }) => {
   const steps = React.useMemo(
     () => getSteps(processMode, includeTranscribeStep, improveEnabled, autoPrint),
@@ -108,11 +111,42 @@ export const ProcessingDialog: React.FC<ProcessingDialogProps> = ({
 
   const showPromptDetails = prompt && processMode !== 'printOnly';
 
+  // Detect if error is from Google/Gemini
+  const isGoogleError = errorText && (
+    errorText.includes('niespójnego polecenia') ||
+    errorText.includes('Gemini') ||
+    errorText.includes('Google') ||
+    errorText.includes('moderation') ||
+    errorText.includes('safety')
+  );
+
+  const displayErrorText = isGoogleError && errorText
+    ? `Błąd po stronie Google: ${errorText}`
+    : (errorText || 'Wystąpił błąd. Spróbuj ponownie.');
+
   return (
     <Dialog onClose={onClose} open={open} fullWidth maxWidth="sm" fullScreen={isMobile}>
       <DialogTitle>Przetwarzanie…</DialogTitle>
       <DialogContent>
-        <Stepper activeStep={activeStep} alternativeLabel sx={{ my: 2 }}>
+        <Stepper
+          activeStep={activeStep}
+          alternativeLabel
+          sx={{
+            my: 2,
+            '& .MuiStepIcon-root.Mui-active': {
+              color: 'primary.main',
+              '& .MuiStepIcon-text': {
+                fill: 'white',
+              },
+            },
+            '& .MuiStepIcon-root.Mui-completed': {
+              color: 'primary.main',
+              '& .MuiStepIcon-text': {
+                fill: 'white',
+              },
+            },
+          }}
+        >
           {steps.map((label) => (
             <Step key={label}>
               <StepLabel>{label}</StepLabel>
@@ -253,9 +287,22 @@ export const ProcessingDialog: React.FC<ProcessingDialogProps> = ({
           </>
         )}
         {status === 'error' && (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            {errorText || 'Wystąpił błąd. Spróbuj ponownie.'}
-          </Alert>
+          <Box sx={{ mt: 2 }}>
+            <Alert severity="error">
+              {displayErrorText}
+            </Alert>
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<RefreshIcon />}
+                onClick={onRetry}
+                sx={{ minWidth: 200, color: 'white' }}
+              >
+                Spróbuj ponownie
+              </Button>
+            </Box>
+          </Box>
         )}
       </DialogContent>
       <DialogActions>
