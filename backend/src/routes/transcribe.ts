@@ -3,7 +3,7 @@ import fs from 'fs/promises';
 import multer from 'multer';
 import path from 'path';
 import { createSession, saveAudio, savePrompt } from '../services/storage.js';
-import { transcribeAudio } from '../services/openai.js';
+import { transcribeAudio } from '../services/gemini-text.js';
 import { logger } from '../utils/logger.js';
 
 const upload = multer({

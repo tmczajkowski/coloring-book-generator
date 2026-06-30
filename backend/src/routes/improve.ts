@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from 'express';
-import { improvePrompt } from '../services/openai.js';
+import { improvePrompt } from '../services/gemini-text.js';
 import { createSession, updateMeta, getSessionDir } from '../services/storage.js';
 import { logger } from '../utils/logger.js';
 import { isValidId } from '../utils/validation.js';

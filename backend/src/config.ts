@@ -34,6 +34,7 @@ export const config = {
   geminiImageSize: (process.env.GEMINI_IMAGE_SIZE as '1K' | '2K' | '4K' | undefined) || '1K',
   geminiApiVersion: (process.env.GEMINI_API_VERSION as 'v1' | 'v1beta' | 'v1alpha' | undefined) || 'v1beta',
   geminiTimeoutMs: Number(process.env.GEMINI_TIMEOUT_MS || 600000),
+  geminiTextModel: process.env.GEMINI_TEXT_MODEL || 'gemini-2.0-flash',
   openaiApiKey: process.env.OPENAI_API_KEY || '',
   printerUri: process.env.PRINTER_URI || '',
   imageReferencesModel: process.env.OPENAI_IMAGE_REFERENCES_MODEL || 'gpt-5',
